@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.14"
+bevy = "0.13" # Ou a versão que você estiver usando
+
+# ADICIONE ESTA LINHA ABAIXO:
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [profile.release]
 opt-level = "z" # Otimiza agressivamente pelo tamanho do arquivo binário

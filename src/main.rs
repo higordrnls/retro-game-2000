@@ -25,15 +25,15 @@ struct Jogador {
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
+    // Nosso bloco verde herói
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
-                // Atualizado para srgb para sumir o aviso do Bevy!
                 color: Color::srgb(0.0, 0.8, 0.4), 
                 custom_size: Some(Vec2::new(40.0, 40.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, 100.0, 0.0), 
+            transform: Transform::from_xyz(0.0, 200.0, 0.0), 
             ..default()
         },
         Jogador {
@@ -45,10 +45,9 @@ fn setup(mut commands: Commands) {
 }
 
 fn aplicar_gravidade(mut query: Query<(&mut Transform, &mut Jogador)>) {
-    let gravidade = -800.0;
+    let gravidade = -1000.0; 
     let chao_y = -200.0;
 
-    // CORRIGIDO: Tiramos o "mut query" e adicionamos ".iter_mut()"
     for (mut transform, mut jogador) in query.iter_mut() {
         if !jogador.esta_no_chao {
             jogador.velocidade_y += gravidade * 0.016;
@@ -78,14 +77,25 @@ fn controle_jogador(keyboard_input: Res<ButtonInput<KeyCode>>, mut query: Query<
         }
         jogador.velocidade_x = direcao_x * 250.0;
 
-        // PULO GARANTIDO: Aceita Espaço, W ou a Seta para Cima clássica
+        // PULO COMPLETO: Espaço, W ou Seta para Cima (mapeando ArrowUp)
         let tentou_pular = keyboard_input.just_pressed(KeyCode::Space) 
             || keyboard_input.just_pressed(KeyCode::KeyW) 
-            || keyboard_input.just_pressed(KeyCode::ArrowUp); // No Bevy mais novo é ArrowUp
+            || keyboard_input.just_pressed(KeyCode::ArrowUp);
 
         if tentou_pular && jogador.esta_no_chao {
             jogador.velocidade_y = 500.0; 
             jogador.esta_no_chao = false; 
         }
+    }
+}
+
+// O TREM VOLTOU! Função que tinha sumido:
+fn mover_jogador(mut query: Query<(&mut Transform, &Jogador)>) {
+    for (mut transform, jogador) in query.iter_mut() {
+        transform.translation.x += jogador.velocidade_x * 0.016;
+        
+        // Limites da tela mobile
+        if transform.translation.x < -160.0 { transform.translation.x = -160.0; }
+        if transform.translation.x > 160.0 { transform.translation.x = 160.0; }
     }
 }

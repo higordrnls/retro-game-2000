@@ -2518,6 +2518,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "meu_jogo_y2k"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "getrandom 0.3.4",
+ "uuid",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3300,15 +3309,6 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
-
-[[package]]
-name = "retro-game-2000"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "getrandom 0.3.4",
- "uuid",
-]
 
 [[package]]
 name = "rodio"

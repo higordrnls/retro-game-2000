@@ -1,77 +1,91 @@
 use bevy::prelude::*;
 
-// 1. Criamos um Componente para identificar quem é o nosso Jogador
-#[derive(Component)]
-struct Player {
-    speed: f32,
-}
-
 fn main() {
     App::new()
-        // Configurações da janela padrão do Bevy
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game 2000 🕹️".into(),
-                resolution: (600., 400.).into(), // Tamanho perfeito para mobile/retro
-                resizable: false,
+                title: "Retro Game 2000 - Mobile Preview".into(),
+                resolution: (360.0, 640.0).into(), 
                 ..default()
             }),
             ..default()
         }))
-        // Adiciona as nossas funções de configuração e lógica
         .add_systems(Startup, setup)
-        .add_systems(Update, move_player)
+        .add_systems(Update, (aplicar_gravidade, controle_jogador, mover_jogador).chain())
         .run();
 }
 
-// 2. O "Setup" roda apenas UMA vez quando o jogo inicia
+#[derive(Component)]
+struct Jogador {
+    velocidade_x: f32,
+    velocidade_y: f32,
+    esta_no_chao: bool,
+}
+
 fn setup(mut commands: Commands) {
-    // Precisamos de uma câmera 2D para conseguir enxergar o jogo
     commands.spawn(Camera2dBundle::default());
 
-    // Mudando a cor do fundo para um bege/branquinho bem retrô e clarinho (#f4f0ea)
-    commands.insert_resource(ClearColor(Color::rgb(0.95, 0.94, 0.92)));
-
-    // Nascendo o nosso "Mario" (um bloco pixelado verde-menta anos 2000)
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
-                color: Color::rgb(0.2, 0.7, 0.5), // Verde menta limpo
-                custom_size: Some(Vec2::new(32.0, 32.0)), // Um bloco de 32x32 pixels
+                // Atualizado para srgb para sumir o aviso do Bevy!
+                color: Color::srgb(0.0, 0.8, 0.4), 
+                custom_size: Some(Vec2::new(40.0, 40.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(0.0, 0.0, 0.0), // Começa no centro da tela
+            transform: Transform::from_xyz(0.0, 100.0, 0.0), 
             ..default()
         },
-        Player { speed: 200.0 }, // Adicionamos o nosso componente Player com velocidade de 200
+        Jogador {
+            velocidade_x: 0.0,
+            velocidade_y: 0.0,
+            esta_no_chao: false,
+        },
     ));
 }
 
-// 3. O sistema de movimento roda a cada frame (lê o teclado)
-fn move_player(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    // Buscamos o Transform (posição) de quem tem o componente Player
-    mut query: Query<(&mut Transform, &Player)>,
-) {
-    if let Ok((mut transform, player)) = query.get_single_mut() {
-        let mut direction = Vec3::ZERO;
+fn aplicar_gravidade(mut query: Query<(&mut Transform, &mut Jogador)>) {
+    let gravidade = -800.0;
+    let chao_y = -200.0;
 
-        // Setas do teclado ou WASD
-        if keyboard_input.pressed(KeyCode::ArrowLeft) || keyboard_input.pressed(KeyCode::KeyA) {
-            direction.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowRight) || keyboard_input.pressed(KeyCode::KeyD) {
-            direction.x += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowUp) || keyboard_input.pressed(KeyCode::KeyW) {
-            direction.y += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::ArrowDown) || keyboard_input.pressed(KeyCode::KeyS) {
-            direction.y -= 1.0;
+    // CORRIGIDO: Tiramos o "mut query" e adicionamos ".iter_mut()"
+    for (mut transform, mut jogador) in query.iter_mut() {
+        if !jogador.esta_no_chao {
+            jogador.velocidade_y += gravidade * 0.016;
         }
 
-        // Move o boneco baseado no tempo decorrido para não travar
-        transform.translation += direction.normalize_or_zero() * player.speed * time.delta_seconds();
+        transform.translation.y += jogador.velocidade_y * 0.016;
+
+        if transform.translation.y <= chao_y {
+            transform.translation.y = chao_y;
+            jogador.velocidade_y = 0.0;
+            jogador.esta_no_chao = true;
+        }
+    }
+}
+
+fn controle_jogador(keyboard_input: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Jogador>) {
+    for mut jogador in query.iter_mut() {
+        let mut direcao_x = 0.0;
+        
+        // Esquerda (A ou Seta Esquerda)
+        if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
+            direcao_x -= 1.0;
+        }
+        // Direita (D ou Seta Direita)
+        if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
+            direcao_x += 1.0;
+        }
+        jogador.velocidade_x = direcao_x * 250.0;
+
+        // PULO GARANTIDO: Aceita Espaço, W ou a Seta para Cima clássica
+        let tentou_pular = keyboard_input.just_pressed(KeyCode::Space) 
+            || keyboard_input.just_pressed(KeyCode::KeyW) 
+            || keyboard_input.just_pressed(KeyCode::ArrowUp); // No Bevy mais novo é ArrowUp
+
+        if tentou_pular && jogador.esta_no_chao {
+            jogador.velocidade_y = 500.0; 
+            jogador.esta_no_chao = false; 
+        }
     }
 }

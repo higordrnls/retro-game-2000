@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.13" # Ou a versão que você estiver usando
+bevy = "0.13" # Mantenha a versão que você já estava usando
 
-# ADICIONE ESTA LINHA ABAIXO:
+# Alvo de patches globais para WebAssembly
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
+uuid = { version = "*", features = ["js"] } 
+# O "*" diz para o Cargo aplicar a feature 'js' em QUALQUER versão do uuid que o Bevy exigir!
 
 [profile.release]
 opt-level = "z" # Otimiza agressivamente pelo tamanho do arquivo binário

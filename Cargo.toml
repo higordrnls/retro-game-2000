@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.14"
+
+[profile.release]
+opt-level = "z" # Otimiza agressivamente pelo tamanho do arquivo binário
+lto = true      # Link-Time Optimization para remover código morto

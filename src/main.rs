@@ -4,13 +4,13 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game 2000 - Among Us Joystick".into(),
+                title: "Retro Game 2000 - Among Us D-Pad".into(),
                 resolution: (360.0, 640.0).into(),
                 ..default()
             }),
             ..default()
         }))
-        .add_systems(Startup, (setup_jogo, setup_joystick))
+        .add_systems(Startup, setup)
         .add_systems(Update, (aplicar_gravidade, controle_joystick, mover_jogador).chain())
         .run();
 }
@@ -22,7 +22,7 @@ struct Jogador {
     esta_no_chao: bool,
 }
 
-// Marcadores para a UI do Joystick
+// Marcadores para o Joystick renderizado na tela
 #[derive(Component)]
 struct BaseJoystick;
 
@@ -32,10 +32,11 @@ struct ManeteJoystick;
 #[derive(Component)]
 struct BotaoPulo;
 
-fn setup_jogo(mut commands: Commands) {
+fn setup(mut commands: Commands) {
+    // Câmera do jogo
     commands.spawn(Camera2dBundle::default());
 
-    // Nosso querido bloco verde herói
+    // 1. O nosso herói (Bloco Verde)
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -52,81 +53,55 @@ fn setup_jogo(mut commands: Commands) {
             esta_no_chao: false,
         },
     ));
-}
 
-fn setup_joystick(mut commands: Commands) {
-    // Container da UI (ocupa a parte de baixo)
-    commands
-        .spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Px(160.0),
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(20.0),
-                justify_content: JustifyContent::SpaceAround,
-                align_items: AlignItems::Center,
+    // --- CONTROLES ESTILO AMONG US VIA SPRITES (SUPER ROBUSTO) ---
+
+    // 2. Base do Joystick (Círculo/Quadrado de fundo no canto inferior esquerdo)
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::srgba(0.2, 0.2, 0.2, 0.6), // Cinza escuro transparente irado
+                custom_size: Some(Vec2::new(100.0, 100.0)),
                 ..default()
             },
+            transform: Transform::from_xyz(-100.0, -220.0, 10.0), // Posicionado no canto inferior esquerdo
             ..default()
-        })
-        .with_children(|parent| {
-            
-            // --- BASE DO JOYSTICK (Estilo Among Us) ---
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(100.0),
-                        height: Val::Px(100.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        border_radius: BorderRadius::all(Val::Percent(50.0)), // Deixa a base Redonda!
-                        ..default()
-                    },
-                    background_color: BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.6)), // Transparente estiloso
+        },
+        BaseJoystick,
+    )).with_children(|parent| {
+        // 3. O Manete (Bolinha branca do meio que mexe)
+        parent.spawn((
+            SpriteBundle {
+                sprite: Sprite {
+                    color: Color::srgb(1.0, 1.0, 1.0), // Brancão
+                    custom_size: Some(Vec2::new(35.0, 35.0)),
                     ..default()
                 },
-                BaseJoystick,
-            )).with_children(|base| {
-                // O Manete (a bolinha do meio que mexe)
-                base.spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(40.0),
-                            height: Val::Px(40.0),
-                            border_radius: BorderRadius::all(Val::Percent(50.0)), // Manete redondo!
-                            ..default()
-                        },
-                        background_color: BackgroundColor(Color::srgb(1.0, 1.0, 1.0)), // Bolinha branca
-                        ..default()
-                    },
-                    ManeteJoystick,
-                ));
-            });
+                transform: Transform::from_xyz(0.0, 0.0, 1.0), // Centralizado na base
+                ..default()
+            },
+            ManeteJoystick,
+        ));
+    });
 
-            // --- BOTÃO DE PULO ULTRA CLEAN ---
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(80.0),
-                        height: Val::Px(80.0),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        border_radius: BorderRadius::all(Val::Percent(50.0)), // Botão de pulo redondo!
-                        ..default()
-                    },
-                    background_color: BackgroundColor(Color::srgb(0.0, 0.6, 0.9)),
-                    ..default()
-                },
-                BotaoPulo,
-            )).with_children(|btn| {
-                btn.spawn(TextBundle::from_section("JUMP", TextStyle { font_size: 18.0, color: Color::WHITE, ..default() }));
-            });
-        });
+    // 4. Botão de Pulo (No canto inferior direito)
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::srgb(0.0, 0.6, 0.9), // Azul bonito
+                custom_size: Some(Vec2::new(75.0, 75.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(100.0, -220.0, 10.0), // Canto inferior direito
+            ..default()
+        },
+        BotaoPulo,
+    ));
 }
 
 fn aplicar_gravidade(mut query: Query<(&mut Transform, &mut Jogador)>) {
     let gravidade = -1000.0; 
-    let chao_y = -80.0;
+    let chao_y = -100.0; // Chão acima dos botões para não tampar o herói
 
     for (mut transform, mut jogador) in query.iter_mut() {
         if !jogador.esta_no_chao {
@@ -144,61 +119,79 @@ fn aplicar_gravidade(mut query: Query<(&mut Transform, &mut Jogador)>) {
 
 fn controle_joystick(
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     mut query_jogador: Query<&mut Jogador>,
-    q_base: Query<(&Interaction, &Node, &GlobalTransform), With<BaseJoystick>>,
-    mut q_manete: Query<&mut Style, With<ManeteJoystick>>,
-    q_pulo: Query<&Interaction, With<BotaoPulo>>,
+    q_base: Query<&Transform, With<BaseJoystick>>,
+    mut q_manete: Query<&mut Transform, (With<ManeteJoystick>, Without<BaseJoystick>)>,
+    q_pulo: Query<&Transform, (With<BotaoPulo>, Without<BaseJoystick>, Without<ManeteJoystick>)>,
 ) {
     let mut direcao_x = 0.0;
-    let mut animar_manete_x = 0.0;
+    let mut offset_manete_x = 0.0;
+    let mut tentou_pular = false;
 
-    // 1. Lógica do Toque/Clique na Base do Joystick
-    if let Ok((interaction, node, global_transform)) = q_base.get_single() {
-        if *interaction == Interaction::Pressed {
-            if let Some(window) = windows.iter().next() {
-                if let Some(pos_mouse) = window.cursor_position() {
-                    // Descobre onde o clique aconteceu em relação ao centro do Joystick
-                    let centro_joystick = global_transform.translation().truncate();
-                    let pos_mouse_bevy = Vec2::new(pos_mouse.x, window.height() - pos_mouse.y);
-                    let delta = pos_mouse_bevy - centro_joystick;
+    // Se o usuário estiver clicando/tocando na tela
+    if mouse_input.pressed(MouseButton::Left) {
+        if let Some(window) = windows.iter().next() {
+            if let Some(pos_cursor) = window.cursor_position() {
+                // Converte a coordenada do mouse para o espaço 2D do Bevy (com centro em 0,0)
+                let pos_mouse_bevy = Vec2::new(
+                    pos_cursor.x - window.width() / 2.0,
+                    (window.height() / 2.0) - pos_cursor.y,
+                );
 
-                    // Se clicou mais para a direita ou esquerda da base
-                    if delta.x > 15.0 {
-                        direcao_x = 1.0;
-                        animar_manete_x = 20.0; // Desloca a bolinha branca para a direita
-                    } else if delta.x < -15.0 {
-                        direcao_x = -1.0;
-                        animar_manete_x = -20.0; // Desloca a bolinha branca para a esquerda
+                // 1. Verifica clique no Joystick
+                if let Ok(transform_base) = q_base.get_single() {
+                    let pos_base = transform_base.translation.truncate();
+                    let distancia = pos_mouse_bevy.distance(pos_base);
+
+                    // Se clicou dentro do raio do D-pad
+                    if distancia < 60.0 {
+                        let delta_x = pos_mouse_bevy.x - pos_base.x;
+                        if delta_x > 10.0 {
+                            direcao_x = 1.0;
+                            offset_manete_x = 20.0; // Empurra bolinha pra direita
+                        } else if delta_x < -10.0 {
+                            direcao_x = -1.0;
+                            offset_manete_x = -20.0; // Empurra bolinha pra esquerda
+                        }
+                    }
+                }
+
+                // 2. Verifica clique no Botão de Pulo (Detecta clique síncrono)
+                if let Ok(transform_pulo) = q_pulo.get_single() {
+                    let pos_pulo = transform_pulo.translation.truncate();
+                    if pos_mouse_bevy.distance(pos_pulo) < 40.0 && mouse_input.just_pressed(MouseButton::Left) {
+                        tentou_pular = true;
                     }
                 }
             }
         }
     }
 
-    // Atualiza a posição visual do manete (feedback UX)
-    if let Ok(mut estilo_manete) = q_manete.get_single_mut() {
-        estilo_manete.margin = UiRect::left(Val::Px(animar_manete_x));
+    // Suaviza e atualiza a posição do analógico visualmente (Feedback UX)
+    if let Ok(mut transform_manete) = q_manete.get_single_mut() {
+        transform_manete.translation.x = offset_manete_x;
     }
 
-    // 2. Fallback para Teclado (para facilitar testes no PC)
+    // Fallback Teclado para testes rápidos no PC
     if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
         direcao_x = -1.0;
     }
     if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
         direcao_x = 1.0;
     }
+    if keyboard_input.just_pressed(KeyCode::Space) || keyboard_input.just_pressed(KeyCode::KeyW) {
+        tentou_pular = true;
+    }
 
-    // 3. Aplica velocidade e Pulo
-    let toque_pulo = q_pulo.iter().any(|i| *i == Interaction::Pressed);
-    let tentou_pular = keyboard_input.just_pressed(KeyCode::Space) || toque_pulo;
-
+    // Aplica os movimentos finais no Jogador
     for mut jogador in query_jogador.iter_mut() {
         jogador.velocidade_x = direcao_x * 250.0;
 
         if tentou_pular && jogador.esta_no_chao {
-            jogador.velocidade_y = 500.0; 
-            jogador.esta_no_chao = false; 
+            jogador.velocidade_y = 500.0;
+            jogador.esta_no_chao = false;
         }
     }
 }

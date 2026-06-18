@@ -27,3 +27,19 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+// 1. Definimos o componente do jogador
+#[derive(Component)]
+struct Player;
+
+// 2. O Sistema que lê o teclado e move o Player
+fn mover_jogador(
+    teclas: Res<ButtonInput<KeyCode>>, 
+    mut query: Query<&mut Transform, With<Player>>
+) {
+    if let Ok(mut transform) = query.get_single_mut() {
+        let velocidade = 2.0;
+        if teclas.pressed(KeyCode::ArrowLeft) { transform.translation.x -= velocidade; }
+        if teclas.pressed(KeyCode::ArrowRight) { transform.translation.x += velocidade; }
+        // ... repita para cima/baixo
+    }
+}

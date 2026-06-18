@@ -35,13 +35,19 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn mover_jogador(
     teclas: Res<ButtonInput<KeyCode>>, 
-    mut query: Query<&mut Transform, With<Player>>
+    mut query: Query<&mut Velocity, With<Player>>
 ) {
-    if let Ok(mut transform) = query.get_single_mut() {
-        let velocidade = 3.0;
-        if teclas.pressed(KeyCode::ArrowLeft) { transform.translation.x -= velocidade; }
-        if teclas.pressed(KeyCode::ArrowRight) { transform.translation.x += velocidade; }
-        if teclas.pressed(KeyCode::ArrowUp) { transform.translation.y += velocidade; }
-        if teclas.pressed(KeyCode::ArrowDown) { transform.translation.y -= velocidade; }
+    if let Ok(mut vel) = query.get_single_mut() {
+        let velocidade = 300.0;
+        
+        // Movimento Horizontal (WASD e Setas)
+        if teclas.pressed(KeyCode::KeyA) || teclas.pressed(KeyCode::ArrowLeft) { vel.linvel.x = -velocidade; }
+        else if teclas.pressed(KeyCode::KeyD) || teclas.pressed(KeyCode::ArrowRight) { vel.linvel.x = velocidade; }
+        else { vel.linvel.x = 0.0; }
+
+        // Pulo (Espaço)
+        if teclas.just_pressed(KeyCode::Space) {
+            vel.linvel.y = 500.0; // Aplica um impulso para cima
+        }
     }
 }

@@ -16,8 +16,8 @@ fn main() {
             ..default()
         }).set(ImagePlugin::default_nearest()))
         
-        // Ativando os plugins de física do Rapier
-        .add_plugins(RapierPhysicsPlugin2d::default())
+        // LINHA 20 CORRIGIDA: Sem o "2d" e com o NoUserData
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugins(RapierDebugRenderPlugin::default()) // Desenha linhas para vermos as colisões
         
         // Sistemas do jogo
@@ -55,9 +55,9 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
         Player,
         RigidBody::Dynamic, // Sofre ação da gravidade
         Velocity::default(), // Permite aplicar forças de movimento
-        Collider::cuboid(25.0, 25.0), // Caixa de colisão do player
-        LockedAxes::ROTATION_LOCKED, // Impede o boneco de sair capotando pelo cenário
-        GravityScale(3.0), // Uma gravidade mais pesadinha para o pulo não parecer que está na lua
+        Collider::cuboid(25.0, 25.0),
+        LockedAxes::ROTATION_LOCKED,
+        GravityScale(7.0), // <-- MUDE DE 3.0 PARA 7.0 (Mais pesado)
     ));
 }
 
@@ -79,7 +79,7 @@ fn mover_jogador(
 
         // Pulo (Espaço, W ou Seta para Cima)
         if teclas.just_pressed(KeyCode::Space) || teclas.just_pressed(KeyCode::KeyW) || teclas.just_pressed(KeyCode::ArrowUp) {
-            vel.linvel.y = 550.0; // Força para cima
+            vel.linvel.y = 350.0; // <-- MUDE DE 550.0 PARA 350.0 (Mais contido)
         }
     }
 }

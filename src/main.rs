@@ -16,7 +16,7 @@ fn main() {
             ..default()
         }).set(ImagePlugin::default_nearest()))
         
-        // LINHA 20 CORRIGIDA: Sem o "2d" e com o NoUserData
+        // Ativando os plugins de física do Rapier
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugins(RapierDebugRenderPlugin::default()) // Desenha linhas para vermos as colisões
         
@@ -30,7 +30,7 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
     // 1. Câmera
     commands.spawn(Camera2dBundle::default());
 
-    // 2. CHÃO (Para o personagem não cair no infinito)
+    // 2. CHÃO
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -41,23 +41,24 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_xyz(0.0, -200.0, 0.0),
             ..default()
         },
-        RigidBody::Fixed, // Não cai com a gravidade
-        Collider::cuboid(300.0, 25.0), // Caixa de colisão do chão
+        RigidBody::Fixed,
+        Collider::cuboid(300.0, 25.0),
     ));
 
-    // 3. JOGADOR (Seu personagem)
+    // 3. JOGADOR (O teu dadinho)
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("meu_personagem.png"),
-            transform: Transform::from_scale(Vec3::splat(0.5)), // 50% do tamanho
+            transform: Transform::from_scale(Vec3::splat(0.5)),
             ..default()
         },
         Player,
-        RigidBody::Dynamic, // Sofre ação da gravidade
-        Velocity::default(), // Permite aplicar forças de movimento
+        RigidBody::Dynamic,
+        Velocity::default(),
         Collider::cuboid(25.0, 25.0),
         LockedAxes::ROTATION_LOCKED,
-        GravityScale(7.0), // <-- MUDE DE 3.0 PARA 7.0 (Mais pesado)
+        // AJUSTADO: Aumentámos o peso para 20.0 para ele cair muito mais rápido!
+        GravityScale(20.0), 
     ));
 }
 
@@ -74,12 +75,12 @@ fn mover_jogador(
         } else if teclas.pressed(KeyCode::KeyD) || teclas.pressed(KeyCode::ArrowRight) { 
             vel.linvel.x = velocidad_corrida; 
         } else { 
-            vel.linvel.x = 0.0; // Para imediatamente ao soltar as teclas
+            vel.linvel.x = 0.0;
         }
 
-        // Pulo (Espaço, W ou Seta para Cima)
+        // AJUSTADO: Diminuímos a força vertical de 350.0 para apenas 130.0!
         if teclas.just_pressed(KeyCode::Space) || teclas.just_pressed(KeyCode::KeyW) || teclas.just_pressed(KeyCode::ArrowUp) {
-            vel.linvel.y = 350.0; // <-- MUDE DE 550.0 PARA 350.0 (Mais contido)
+            vel.linvel.y = 130.0; 
         }
     }
 }

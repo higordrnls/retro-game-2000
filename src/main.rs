@@ -1,8 +1,16 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResolution};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // <-- O SEGREDO DO PIXEL ART NÍTIDO!
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                // Aqui definimos o tamanho (ex: 360x640 para uma proporção vertical)
+                resolution: WindowResolution::new(360.0, 640.0),
+                title: "Meu RPG Y2K".into(),
+                ..default()
+            }),
+            ..default()
+        }).set(ImagePlugin::default_nearest()))
         .add_systems(Startup, setup_game)
         .run();
 }
@@ -18,3 +26,4 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     });
 }
+

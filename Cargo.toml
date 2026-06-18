@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.14.2"
-bevy_rapier2d = "0.26.0" # Esta versão é compatível com o Bevy 0.14
+bevy = "0.14"
+bevy_rapier2d = "0.27" # <-- A versão 0.27 é a ÚNICA 100% compatível com o Bevy 0.14!
 
 # Alvo de patches globais para WebAssembly
 [target.'cfg(target_arch = "wasm32")'.dependencies]

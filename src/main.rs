@@ -1,24 +1,36 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*; 
 
-// 1. AQUI ESTÁ A DEFINIÇÃO QUE FALTAVA!
 #[derive(Component)]
 struct Player;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(RapierPhysicsPlugin2d::default()) // Ativa a física
-        .add_plugins(RapierDebugRenderPlugin::default()) // Mostra os contornos verdes de colisão (ajuda muito!)
+        // Configuração da janela mobile + pixel art nítida
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: bevy::window::WindowResolution::new(360.0, 640.0),
+                title: "Meu RPG Y2K".into(),
+                ..default()
+            }),
+            ..default()
+        }).set(ImagePlugin::default_nearest()))
+        
+        // Ativando os plugins de física do Rapier
+        .add_plugins(RapierPhysicsPlugin2d::default())
+        .add_plugins(RapierDebugRenderPlugin::default()) // Desenha linhas para vermos as colisões
+        
+        // Sistemas do jogo
         .add_systems(Startup, setup_game)
         .add_systems(Update, mover_jogador)
         .run();
 }
 
 fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // 1. Câmera
     commands.spawn(Camera2dBundle::default());
 
-    // CHÃO: Precisamos de um lugar para o personagem pisar
+    // 2. CHÃO (Para o personagem não cair no infinito)
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -29,23 +41,23 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_xyz(0.0, -200.0, 0.0),
             ..default()
         },
-        RigidBody::Fixed, // "Fixed" significa que a gravidade não afeta o chão
-        Collider::cuboid(300.0, 25.0), // A caixa de colisão do chão
+        RigidBody::Fixed, // Não cai com a gravidade
+        Collider::cuboid(300.0, 25.0), // Caixa de colisão do chão
     ));
 
-    // JOGADOR
+    // 3. JOGADOR (Seu personagem)
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("meu_personagem.png"),
-            transform: Transform::from_scale(Vec3::splat(0.5)), 
+            transform: Transform::from_scale(Vec3::splat(0.5)), // 50% do tamanho
             ..default()
         },
-        Player, // A tag que identifica ele
-        RigidBody::Dynamic, // Corpo dinâmico (sofre gravidade)
-        Velocity::default(), // Permite que a gente mude a velocidade dele
-        Collider::cuboid(20.0, 20.0), // A caixa de colisão (ajuste o 20.0 se ficar grande ou pequena pro seu desenho)
-        LockedAxes::ROTATION_LOCKED, // Impede que o personagem saia rolando igual uma bola
-        GravityScale(3.0), // Deixa a gravidade um pouco mais rápida e responsiva
+        Player,
+        RigidBody::Dynamic, // Sofre ação da gravidade
+        Velocity::default(), // Permite aplicar forças de movimento
+        Collider::cuboid(25.0, 25.0), // Caixa de colisão do player
+        LockedAxes::ROTATION_LOCKED, // Impede o boneco de sair capotando pelo cenário
+        GravityScale(3.0), // Uma gravidade mais pesadinha para o pulo não parecer que está na lua
     ));
 }
 
@@ -54,16 +66,20 @@ fn mover_jogador(
     mut query: Query<&mut Velocity, With<Player>>
 ) {
     if let Ok(mut vel) = query.get_single_mut() {
-        let velocidade = 300.0;
+        let velocidad_corrida = 250.0;
         
-        // Movimento Horizontal (WASD e Setas)
-        if teclas.pressed(KeyCode::KeyA) || teclas.pressed(KeyCode::ArrowLeft) { vel.linvel.x = -velocidade; }
-        else if teclas.pressed(KeyCode::KeyD) || teclas.pressed(KeyCode::ArrowRight) { vel.linvel.x = velocidade; }
-        else { vel.linvel.x = 0.0; }
+        // Controles de direção (WASD + Setas)
+        if teclas.pressed(KeyCode::KeyA) || teclas.pressed(KeyCode::ArrowLeft) { 
+            vel.linvel.x = -velocidad_corrida; 
+        } else if teclas.pressed(KeyCode::KeyD) || teclas.pressed(KeyCode::ArrowRight) { 
+            vel.linvel.x = velocidad_corrida; 
+        } else { 
+            vel.linvel.x = 0.0; // Para imediatamente ao soltar as teclas
+        }
 
-        // Pulo (Espaço, W ou Seta pra Cima)
+        // Pulo (Espaço, W ou Seta para Cima)
         if teclas.just_pressed(KeyCode::Space) || teclas.just_pressed(KeyCode::KeyW) || teclas.just_pressed(KeyCode::ArrowUp) {
-            vel.linvel.y = 500.0; // Aplica um impulso para cima
+            vel.linvel.y = 550.0; // Força para cima
         }
     }
 }

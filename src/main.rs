@@ -1,21 +1,13 @@
-use bevy::{prelude::*, window::WindowResolution};
-
-// 1. Define o componente que marca quem é o jogador
-#[derive(Component)]
-struct Player;
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*; // <--- ISSO É O QUE FALTA!
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                resolution: WindowResolution::new(360.0, 640.0), // Formato Widescreen Mobile
-                title: "Meu RPG Y2K".into(),
-                ..default()
-            }),
-            ..default()
-        }).set(ImagePlugin::default_nearest()))
+        .add_plugins(DefaultPlugins)
+        .add_plugins(RapierPhysicsPlugin2d::default()) // <--- ATIVA A FÍSICA
+        .add_plugins(RapierDebugRenderPlugin::default()) // Opcional: mostra as caixas de colisão
         .add_systems(Startup, setup_game)
-        .add_systems(Update, mover_jogador) // <--- IMPORTANTE: Registramos o movimento aqui!
+        .add_systems(Update, mover_jogador)
         .run();
 }
 

@@ -55,14 +55,17 @@ fn setup_game(
         },
     ));
 
-    // CONFIGURAÇÃO DA ANIMAÇÃO (Ajuste o tamanho de cada frame se necessário, ex: 32x32)
-    let layout = TextureAtlasLayout::from_grid(UVec2::new(64, 64), 4, 3, None, None);
+    // 1. CORREÇÃO DO TAMANHO DA GRADE:
+    // Dividimos 1254 por 4 colunas = 313 de largura.
+    // Se ela tiver 4 linhas de animações, a altura também será 313.
+    let layout = TextureAtlasLayout::from_grid(UVec2::new(313, 313), 4, 4, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
 
     // JOGADOR COM SPRITESHEET
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("meu_personagem_spritesheet.png"), // Ajuste para o nome real do seu arquivo
+            texture: asset_server.load("meu_personagem_spritesheet.jpg"),
+            transform: Transform::from_scale(Vec3::splat(0.3)), // Reduz o tamanho dele para 30% do original
             ..default()
         },
         TextureAtlas {
@@ -73,7 +76,9 @@ fn setup_game(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)), 
         RigidBody::Dynamic,
         Velocity::default(),
-        Collider::cuboid(25.0, 25.0),
+        // 3. AJUSTE DA CAIXA DE COLISÃO:
+        // Como o frame agora é maior (313px), aumentei o collider para o boneco não afundar no chão
+        Collider::cuboid(40.0, 40.0), 
         LockedAxes::ROTATION_LOCKED,
         GravityScale(150.0), 
         Damping { linear_damping: 0.0, angular_damping: 0.0 },

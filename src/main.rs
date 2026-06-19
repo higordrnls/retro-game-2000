@@ -64,8 +64,11 @@ fn setup_game(
     // JOGADOR COM SPRITESHEET
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("meu_personagem_spritesheet.jpg"),
-            transform: Transform::from_scale(Vec3::splat(0.3)), // Reduz o tamanho dele para 30% do original
+            // CORREÇÃO AQUI: Mudamos para .png para bater com o seu arquivo real!
+            texture: asset_server.load("meu_personagem_spritesheet.png"), 
+            // Se o nome do seu arquivo for apenas "meu_personagem.png", mude aqui dentro também!
+            
+            transform: Transform::from_scale(Vec3::splat(0.3)), // Se ele ficar gigante, essa linha diminui o tamanho dele
             ..default()
         },
         TextureAtlas {

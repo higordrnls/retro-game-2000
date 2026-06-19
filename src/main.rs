@@ -11,20 +11,21 @@ struct AnimationTimer(Timer);
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                resolution: bevy::window::WindowResolution::new(360.0, 640.0),
-                title: "Meu RPG Y2K".into(),
-                ..default()
-            }),
-            ..default()
-        }).set(ImagePlugin::default_nearest())) // Mantém o Pixel Art nítido
+        // Adiciona as configurações padrão do Bevy (janela, gráficos, etc)
+        .add_plugins(DefaultPlugins) 
         
-        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugins(RapierDebugRenderPlugin::default()) 
+        // Se você estiver usando física (Rapier), o plugin dele fica aqui:
+        // .add_plugins(RapierPhysicsPlugin::<NoUserData>::default()) 
         
+        // O setup roda uma única vez no início (para criar o boneco e o chão)
         .add_systems(Startup, setup_game)
-        .add_systems(Update, (mover_jogador, camera_seguidora, animar_personagem)) 
+        
+        // --- AQUI ESTÁ O QUE VOCÊ PROCURA! ---
+        // O Update roda a cada frame por segundo (60 vezes por segundo!)
+        // Passamos os sistemas dentro de parênteses (uma tupla) separados por vírgula
+        .add_systems(Update, (player_movement, animate_player)) 
+        
+        // Roda o jogo de fato
         .run();
 }
 
@@ -138,26 +139,34 @@ fn camera_seguidora(
     }
 }
 
-fn animar_personagem(
+fn animate_player(
     time: Res<Time>,
-    mut query: Query<(&Velocity, &mut AnimationTimer, &mut TextureAtlas), With<Player>>,
+    mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Velocity), With<Player>>,
 ) {
-    if let Ok((vel, mut timer, mut atlas)) = query.get_single_mut() {
+    for (mut timer, mut atlas, velocity) in &mut query {
         timer.0.tick(time.delta());
-
+        
         if timer.0.just_finished() {
-            let (frame_inicial, frame_final) = if vel.linvel.y.abs() > 0.5 {
-                (8, 11) // Linha 3: Pulando
-            } else if vel.linvel.x.abs() > 0.1 {
-                (4, 7)  // Linha 2: Correndo
-            } else {
-                (0, 3)  // Linha 1: Parado (Idle)
-            };
+            // Verifica se o jogador está se movendo no eixo X (esquerda/direita)
+            let is_moving = velocity.linvel.x.abs() > 0.1;
 
-            if atlas.index < frame_inicial || atlas.index >= frame_final {
-                atlas.index = frame_inicial;
+            if is_moving {
+                // --- ANIMAÇÃO DE CORRIDA (Frames 4 a 7) ---
+                // Se o index atual não estiver no alcance de corrida, força a ir para o frame 4
+                if atlas.index < 4 || atlas.index > 7 {
+                    atlas.index = 4;
+                } else {
+                    // Avança o frame e faz o loop entre 4 e 7
+                    atlas.index = 4 + ((atlas.index - 4 + 1) % 4);
+                }
             } else {
-                atlas.index += 1;
+                // --- ANIMAÇÃO DE PARADO (Frames 0 a 3) ---
+                if atlas.index > 3 {
+                    atlas.index = 0;
+                } else {
+                    // Avança o frame e faz o loop entre 0 e 3
+                    atlas.index = (atlas.index + 1) % 4;
+                }
             }
         }
     }

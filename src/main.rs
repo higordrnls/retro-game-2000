@@ -59,9 +59,7 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
         Velocity::default(),
         Collider::cuboid(25.0, 25.0),
         LockedAxes::ROTATION_LOCKED,
-        // MODIFICADO: Gravidade dobrada (de 75 para 150) para o boneco não flutuar nada
         GravityScale(150.0), 
-        // ADICIONADO: Remove qualquer amortecimento/atrito do ar, deixando o pulo 100% ágil e direto
         Damping {
             linear_damping: 0.0,
             angular_damping: 0.0,
@@ -94,10 +92,9 @@ fn mover_jogador(
             vel.linvel.x = 0.0;
         }
 
+        // Se o fantasma for expulso do resto do código, qualquer uma dessas três teclas vai dar o pulo perfeito e seco!
         if teclas.just_pressed(KeyCode::Space) || teclas.just_pressed(KeyCode::KeyW) || teclas.just_pressed(KeyCode::ArrowUp) {
             if player.saltos < 2 {
-                // MODIFICADO: Força do pulo aumentada para 320.0 para compensar a gravidade pesada.
-                // Agora ele atinge a mesma altura de antes, só que muito mais rápido e responsivo!
                 vel.linvel.y = 320.0; 
                 player.saltos += 1;   
             }

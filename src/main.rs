@@ -33,7 +33,8 @@ fn setup_game(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>, 
 ) {
-    commands.spawn((Camera2dBundle::default(), SpatialBundle::default()));
+    // CORREÇÃO: Spawna apenas a câmera, sem o SpatialBundle duplicado!
+    commands.spawn(Camera2dBundle::default());
 
     // CHÃO GIGANTE
     commands.spawn((
@@ -58,13 +59,12 @@ fn setup_game(
     let layout = TextureAtlasLayout::from_grid(UVec2::new(64, 64), 4, 3, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
 
-    // JOGADOR COM SPRITESHEET (Corrigido para a sua versão do Bevy)
+    // JOGADOR COM SPRITESHEET
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("meu_personagem_spritesheet.png"), // Lembre de ajustar para o nome real do seu arquivo
+            texture: asset_server.load("meu_personagem_spritesheet.png"), // Ajuste para o nome real do seu arquivo
             ..default()
         },
-        // CORREÇÃO: O TextureAtlas entra aqui como um componente solto na tupla!
         TextureAtlas {
             layout: layout_handle,
             index: 0,
@@ -130,7 +130,6 @@ fn camera_seguidora(
     }
 }
 
-// CORREÇÃO: O sistema agora pede o componente TextureAtlas diretamente na Query, em vez de tentar ler do Sprite
 fn animar_personagem(
     time: Res<Time>,
     mut query: Query<(&Velocity, &mut AnimationTimer, &mut TextureAtlas), With<Player>>,
@@ -139,9 +138,8 @@ fn animar_personagem(
         timer.0.tick(time.delta());
 
         if timer.0.just_finished() {
-            // Define os frames baseado nas ações físicas
             let (frame_inicial, frame_final) = if vel.linvel.y.abs() > 0.5 {
-                (8, 11) // Linha 3: Pulando/Caindo
+                (8, 11) // Linha 3: Pulando
             } else if vel.linvel.x.abs() > 0.1 {
                 (4, 7)  // Linha 2: Correndo
             } else {

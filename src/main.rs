@@ -6,7 +6,6 @@ struct Player {
     saltos: u32,
 }
 
-// NOVO: Componente para controlar o tempo de cada frame da animação
 #[derive(Component)]
 struct AnimationTimer(Timer);
 
@@ -25,7 +24,6 @@ fn main() {
         .add_plugins(RapierDebugRenderPlugin::default()) 
         
         .add_systems(Startup, setup_game)
-        // ADICIONADO: 'animar_personagem' rodando junto no Update
         .add_systems(Update, (mover_jogador, camera_seguidora, animar_personagem)) 
         .run();
 }
@@ -33,7 +31,7 @@ fn main() {
 fn setup_game(
     mut commands: Commands, 
     asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>, // ADICIONADO: Para criar a grade de animação
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>, 
 ) {
     commands.spawn((Camera2dBundle::default(), SpatialBundle::default()));
 
@@ -56,29 +54,23 @@ fn setup_game(
         },
     ));
 
-    // CONFIGURAÇÃO DA ANIMACAO:
-    // Supondo que cada frame do seu boneco tem 64x64 pixels, dispostos em 4 colunas e 3 linhas.
-    // (Ajuste o UVec2::new(64, 64) se o tamanho do frame for diferente, ex: 32x32)
+    // CONFIGURAÇÃO DA ANIMAÇÃO (Ajuste o tamanho de cada frame se necessário, ex: 32x32)
     let layout = TextureAtlasLayout::from_grid(UVec2::new(64, 64), 4, 3, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
 
-    // JOGADOR COM SPRITESHEET
+    // JOGADOR COM SPRITESHEET (Corrigido para a sua versão do Bevy)
     commands.spawn((
         SpriteBundle {
-            // ATENÇÃO: Mude aqui para o nome exato do arquivo da sua spritesheet nova!
-            texture: asset_server.load("meu_personagem_spritesheet.png"), 
-            sprite: Sprite {
-                // Dizemos ao Bevy para usar o fatiamento em grade (Atlas) começando no frame 0
-                atlas: Some(TextureAtlas {
-                    layout: layout_handle,
-                    index: 0,
-                }),
-                ..default()
-            },
+            texture: asset_server.load("meu_personagem_spritesheet.png"), // Lembre de ajustar para o nome real do seu arquivo
             ..default()
         },
+        // CORREÇÃO: O TextureAtlas entra aqui como um componente solto na tupla!
+        TextureAtlas {
+            layout: layout_handle,
+            index: 0,
+        },
         Player { saltos: 0 }, 
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)), // Troca de frame a cada 0.1 segundos
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)), 
         RigidBody::Dynamic,
         Velocity::default(),
         Collider::cuboid(25.0, 25.0),
@@ -138,33 +130,28 @@ fn camera_seguidora(
     }
 }
 
-// NOVO SISTEMA: Controla qual linha de animação rodar baseado no movimento físico
+// CORREÇÃO: O sistema agora pede o componente TextureAtlas diretamente na Query, em vez de tentar ler do Sprite
 fn animar_personagem(
     time: Res<Time>,
-    mut query: Query<(&Velocity, &mut AnimationTimer, &mut Sprite), With<Player>>,
+    mut query: Query<(&Velocity, &mut AnimationTimer, &mut TextureAtlas), With<Player>>,
 ) {
-    if let Ok((vel, mut timer, mut sprite)) = query.get_single_mut() {
-        // Atualiza o relógio interno da animação
+    if let Ok((vel, mut timer, mut atlas)) = query.get_single_mut() {
         timer.0.tick(time.delta());
 
         if timer.0.just_finished() {
-            if let Some(atlas) = &mut sprite.atlas {
-                // Define qual o frame inicial e final baseado no estado físico:
-                let (frame_inicial, frame_final) = if vel.linvel.y.abs() > 0.5 {
-                    (8, 11) // Linha 3 (Frames de 8 a 11): Pulando/Caindo
-                } else if vel.linvel.x.abs() > 0.1 {
-                    (4, 7)  // Linha 2 (Frames de 4 a 7): Correndo
-                } else {
-                    (0, 3)  // Linha 1 (Frames de 0 a 3): Parado (Idle)
-                };
+            // Define os frames baseado nas ações físicas
+            let (frame_inicial, frame_final) = if vel.linvel.y.abs() > 0.5 {
+                (8, 11) // Linha 3: Pulando/Caindo
+            } else if vel.linvel.x.abs() > 0.1 {
+                (4, 7)  // Linha 2: Correndo
+            } else {
+                (0, 3)  // Linha 1: Parado (Idle)
+            };
 
-                // Se o frame atual estiver fora da animação correta, reseta para o começo dela
-                if atlas.index < frame_inicial || atlas.index >= frame_final {
-                    atlas.index = frame_inicial;
-                } else {
-                    // Caso contrário, avança 1 frame
-                    atlas.index += 1;
-                }
+            if atlas.index < frame_inicial || atlas.index >= frame_final {
+                atlas.index = frame_inicial;
+            } else {
+                atlas.index += 1;
             }
         }
     }

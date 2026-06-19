@@ -20,10 +20,10 @@ fn main() {
         // O setup roda uma única vez no início (para criar o boneco e o chão)
         .add_systems(Startup, setup_game)
         
-        // --- AQUI ESTÁ O QUE VOCÊ PROCURA! ---
-        // O Update roda a cada frame por segundo (60 vezes por segundo!)
-        // Passamos os sistemas dentro de parênteses (uma tupla) separados por vírgula
-        .add_systems(Update, (player_movement, animate_player)) 
+        // --- CORREÇÃO AQUI ---
+        // Agora os nomes batem exatamente com as suas funções criadas abaixo!
+        // Também adicionei a camera_seguidora para ela funcionar no jogo.
+        .add_systems(Update, (mover_jogador, camera_seguidora, animate_player)) 
         
         // Roda o jogo de fato
         .run();
@@ -34,7 +34,6 @@ fn setup_game(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>, 
 ) {
-    // CORREÇÃO: Spawna apenas a câmera, sem o SpatialBundle duplicado!
     commands.spawn(Camera2dBundle::default());
 
     // CHÃO GIGANTE
@@ -56,20 +55,15 @@ fn setup_game(
         },
     ));
 
-    // 1. CORREÇÃO DO TAMANHO DA GRADE:
-    // Dividimos 1254 por 4 colunas = 313 de largura.
-    // Se ela tiver 4 linhas de animações, a altura também será 313.
+    // Configuração da grade do seu spritesheet PNG
     let layout = TextureAtlasLayout::from_grid(UVec2::new(313, 313), 4, 4, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
 
     // JOGADOR COM SPRITESHEET
     commands.spawn((
         SpriteBundle {
-            // CORREÇÃO AQUI: Mudamos para .png para bater com o seu arquivo real!
             texture: asset_server.load("meu_personagem_spritesheet.png"), 
-            // Se o nome do seu arquivo for apenas "meu_personagem.png", mude aqui dentro também!
-            
-            transform: Transform::from_scale(Vec3::splat(0.3)), // Se ele ficar gigante, essa linha diminui o tamanho dele
+            transform: Transform::from_scale(Vec3::splat(0.3)), 
             ..default()
         },
         TextureAtlas {
@@ -80,8 +74,6 @@ fn setup_game(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)), 
         RigidBody::Dynamic,
         Velocity::default(),
-        // 3. AJUSTE DA CAIXA DE COLISÃO:
-        // Como o frame agora é maior (313px), aumentei o collider para o boneco não afundar no chão
         Collider::cuboid(40.0, 40.0), 
         LockedAxes::ROTATION_LOCKED,
         GravityScale(150.0), 
@@ -147,16 +139,14 @@ fn animate_player(
         timer.0.tick(time.delta());
         
         if timer.0.just_finished() {
-            // Verifica se o jogador está se movendo no eixo X (esquerda/direita)
+            // Se a velocidade no eixo X for maior que zero, ele está andando
             let is_moving = velocity.linvel.x.abs() > 0.1;
 
             if is_moving {
                 // --- ANIMAÇÃO DE CORRIDA (Frames 4 a 7) ---
-                // Se o index atual não estiver no alcance de corrida, força a ir para o frame 4
                 if atlas.index < 4 || atlas.index > 7 {
                     atlas.index = 4;
                 } else {
-                    // Avança o frame e faz o loop entre 4 e 7
                     atlas.index = 4 + ((atlas.index - 4 + 1) % 4);
                 }
             } else {
@@ -164,7 +154,6 @@ fn animate_player(
                 if atlas.index > 3 {
                     atlas.index = 0;
                 } else {
-                    // Avança o frame e faz o loop entre 0 e 3
                     atlas.index = (atlas.index + 1) % 4;
                 }
             }

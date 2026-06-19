@@ -59,7 +59,13 @@ fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
         Velocity::default(),
         Collider::cuboid(25.0, 25.0),
         LockedAxes::ROTATION_LOCKED,
-        GravityScale(75.0), 
+        // MODIFICADO: Gravidade dobrada (de 75 para 150) para o boneco não flutuar nada
+        GravityScale(150.0), 
+        // ADICIONADO: Remove qualquer amortecimento/atrito do ar, deixando o pulo 100% ágil e direto
+        Damping {
+            linear_damping: 0.0,
+            angular_damping: 0.0,
+        },
         Restitution {
             coefficient: 0.0,
             combine_rule: CoefficientCombineRule::Min,
@@ -90,8 +96,9 @@ fn mover_jogador(
 
         if teclas.just_pressed(KeyCode::Space) || teclas.just_pressed(KeyCode::KeyW) || teclas.just_pressed(KeyCode::ArrowUp) {
             if player.saltos < 2 {
-                // MODIFICADO: De 160.0 para 226.0 para atingir o dobro da altura física
-                vel.linvel.y = 226.0; 
+                // MODIFICADO: Força do pulo aumentada para 320.0 para compensar a gravidade pesada.
+                // Agora ele atinge a mesma altura de antes, só que muito mais rápido e responsivo!
+                vel.linvel.y = 320.0; 
                 player.saltos += 1;   
             }
         }

@@ -192,7 +192,12 @@ fn controle_joystick(
     if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
         direcao_x = 1.0;
     }
-    if keyboard_input.just_pressed(KeyCode::Space) || keyboard_input.just_pressed(KeyCode::KeyW) {
+    
+    // ADICIONADO: Seta para cima (KeyCode::ArrowUp) para pular
+    if keyboard_input.just_pressed(KeyCode::Space) 
+        || keyboard_input.just_pressed(KeyCode::KeyW) 
+        || keyboard_input.just_pressed(KeyCode::ArrowUp) 
+    {
         tentou_pular = true;
     }
 
@@ -227,11 +232,9 @@ fn animate_player(
     mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Jogador)>,
 ) {
     for (mut timer, mut atlas, jogador) in query.iter_mut() {
-        // Checa se o boneco tem velocidade relevante para os lados
         let is_moving = jogador.velocidade_x.abs() > 0.1;
 
         if is_moving {
-            // Se estiver andando, roda a animação da segunda linha (frames 4 a 7)
             timer.0.tick(time.delta());
             if timer.0.just_finished() {
                 if atlas.index < 4 || atlas.index > 7 {
@@ -241,8 +244,6 @@ fn animate_player(
                 }
             }
         } else {
-            // SE ESTIVER PARADO: Força o frame a voltar e cravar no índice 0.
-            // Isso mata qualquer loop de caminhada fantasma.
             atlas.index = 0;
         }
     }

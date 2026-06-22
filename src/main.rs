@@ -43,7 +43,7 @@ fn setup(
 
     // CORREÇÃO DA MATEMÁTICA: 314x313 cabe perfeitamente dentro de 1256x1254 sem estourar as bordas
     let layout = TextureAtlasLayout::from_grid(
-        UVec2::new(314, 313), // Tamanho correto de cada frame
+        UVec2::new(314, 370), // Tamanho correto de cada frame
         4,                    // 4 colunas
         4,                    // 4 linhas
         None,                 

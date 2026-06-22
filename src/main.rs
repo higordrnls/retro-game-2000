@@ -2,17 +2,15 @@ use bevy::prelude::*;
 
 fn main() {
     App::new()
-        // --- 1. CORREÇÃO DA TELA (Restaurado o tamanho de celular 9:16) ---
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game 2000 - Among Us D-Pad".into(),
+                title: "Retro Game - Boneco Corrigido".into(),
                 resolution: (360.0, 640.0).into(),
                 ..default()
             }),
             ..default()
         }))
         .add_systems(Startup, setup)
-        // Sistemas rodando em sequência organizada
         .add_systems(Update, (aplicar_gravidade, controle_joystick, mover_jogador, animate_player).chain())
         .run();
 }
@@ -27,7 +25,6 @@ struct Jogador {
 #[derive(Component)]
 struct AnimationTimer(Timer);
 
-// Marcadores para o Joystick renderizado na tela
 #[derive(Component)]
 struct BaseJoystick;
 
@@ -42,50 +39,32 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    // Câmera do jogo
     commands.spawn(Camera2dBundle::default());
 
-    // --- 3. SOLUÇÃO DEFINITIVA DO CORTE (Precisão Cirúrgica por Frame) ---
-    // Como a largura total é 1254 e a altura de cada linha é 370 (totalizando 4 linhas = 1480 de altura)
-    let mut layout = TextureAtlasLayout::new_empty(UVec2::new(1254, 1480));
-
-    // LINHA 1 (Frames 0 a 3) - Parado
-    layout.add_sprite(URect::new(0,   0, 314,  370));  // Frame 0 (Largura: 314)
-    layout.add_sprite(URect::new(314, 0, 627,  370));  // Frame 1 (Largura: 313)
-    layout.add_sprite(URect::new(627, 0, 941,  370));  // Frame 2 (Largura: 314)
-    layout.add_sprite(URect::new(941, 0, 1254, 370));  // Frame 3 (Largura: 313)
-
-    // LINHA 2 (Frames 4 a 7) - Correndo
-    layout.add_sprite(URect::new(0,   370, 314,  740)); // Frame 4
-    layout.add_sprite(URect::new(314, 370, 627,  740)); // Frame 5
-    layout.add_sprite(URect::new(627, 370, 941,  740)); // Frame 6
-    layout.add_sprite(URect::new(941, 370, 1254, 740)); // Frame 7
-
-    // LINHA 3 (Frames 8 a 11) - Caso use futuramente
-    layout.add_sprite(URect::new(0,   740, 314,  1110)); // Frame 8
-    layout.add_sprite(URect::new(314, 740, 627,  1110)); // Frame 9
-    layout.add_sprite(URect::new(627, 740, 941,  1110)); // Frame 10
-    layout.add_sprite(URect::new(941, 740, 1254, 1110)); // Frame 11
-
-    // LINHA 4 (Frames 12 a 15) - Caso use futuramente
-    layout.add_sprite(URect::new(0,   1110, 314,  1480)); // Frame 12
-    layout.add_sprite(URect::new(314, 1110, 627,  1480)); // Frame 13
-    layout.add_sprite(URect::new(627, 1110, 941,  1480)); // Frame 14
-    layout.add_sprite(URect::new(941, 1110, 1254, 1480)); // Frame 15
-
+    // CORREÇÃO DA MATEMÁTICA: 314x313 cabe perfeitamente dentro de 1256x1254 sem estourar as bordas
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::new(314, 313), // Tamanho correto de cada frame
+        4,                    // 4 colunas
+        4,                    // 4 linhas
+        None,                 
+        None,                 
+    );
     let layout_handle = texture_atlas_layouts.add(layout);
 
-    // O nosso herói agora usando o Spritesheet Animado e a sua struct Jogador original
+    // CORREÇÃO: Voltamos para .png conforme você confirmou!
+    // Certifique-se de que o arquivo na pasta assets/ se chama exatamente assim: meu_personagem_spritesheet.png
+    let textura_personagem = asset_server.load("meu_personagem_spritesheet.png");
+
+    // Spawna o Jogador
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("meu_personagem_spritesheet.png"),
-            // Ajuste o scale se ele ficar muito grande na tela de celular
+            texture: textura_personagem,
             transform: Transform::from_xyz(0.0, 100.0, 0.0).with_scale(Vec3::splat(0.5)), 
             ..default()
         },
         TextureAtlas {
             layout: layout_handle,
-            index: 0,
+            index: 0, // Começa no primeiro frame (parado)
         },
         Jogador {
             velocidade_x: 0.0,
@@ -95,9 +74,7 @@ fn setup(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 
-    // --- CONTROLES ESTILO AMONG US VIA SPRITES VIA SEU CÓDIGO ORIGINAL ---
-
-    // Base do Joystick (Círculo/Quadrado de fundo no canto inferior esquerdo)
+    // Base do Joystick Virtual
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -110,7 +87,6 @@ fn setup(
         },
         BaseJoystick,
     )).with_children(|parent| {
-        // O Manete (Bolinha branca do meio que mexe)
         parent.spawn((
             SpriteBundle {
                 sprite: Sprite {
@@ -125,7 +101,7 @@ fn setup(
         ));
     });
 
-    // Botão de Pulo (No canto inferior direito)
+    // Botão de Pulo Virtual
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -140,15 +116,16 @@ fn setup(
     ));
 }
 
-fn aplicar_gravidade(mut query: Query<(&mut Transform, &mut Jogador)>) {
-    let gravidade = -1000.0; 
-    let chao_y = -100.0; // Chão acima dos botões para não tampar o herói
+fn aplicar_gravidade(time: Res<Time>, mut query: Query<(&mut Transform, &mut Jogador)>) {
+    let gravidade = -1200.0; 
+    let chao_y = -100.0; 
+    let delta = time.delta_seconds();
 
     for (mut transform, mut jogador) in query.iter_mut() {
         if !jogador.esta_no_chao {
-            jogador.velocidade_y += gravidade * 0.016;
+            jogador.velocidade_y += gravidade * delta;
         }
-        transform.translation.y += jogador.velocidade_y * 0.016;
+        transform.translation.y += jogador.velocidade_y * delta;
 
         if transform.translation.y <= chao_y {
             transform.translation.y = chao_y;
@@ -183,21 +160,21 @@ fn controle_joystick(
                     let pos_base = transform_base.translation.truncate();
                     let distancia = pos_mouse_bevy.distance(pos_base);
 
-                    if distancia < 60.0 {
+                    if distancia < 120.0 {
                         let delta_x = pos_mouse_bevy.x - pos_base.x;
-                        if delta_x > 10.0 {
+                        if delta_x > 15.0 {
                             direcao_x = 1.0;
-                            offset_manete_x = 20.0;
-                        } else if delta_x < -10.0 {
+                            offset_manete_x = 25.0;
+                        } else if delta_x < -15.0 {
                             direcao_x = -1.0;
-                            offset_manete_x = -20.0;
+                            offset_manete_x = -25.0;
                         }
                     }
                 }
 
                 if let Ok(transform_pulo) = q_pulo.get_single() {
                     let pos_pulo = transform_pulo.translation.truncate();
-                    if pos_mouse_bevy.distance(pos_pulo) < 40.0 && mouse_input.just_pressed(MouseButton::Left) {
+                    if pos_mouse_bevy.distance(pos_pulo) < 50.0 && mouse_input.just_pressed(MouseButton::Left) {
                         tentou_pular = true;
                     }
                 }
@@ -223,22 +200,23 @@ fn controle_joystick(
         jogador.velocidade_x = direcao_x * 250.0;
 
         if tentou_pular && jogador.esta_no_chao {
-            jogador.velocidade_y = 500.0;
+            jogador.velocidade_y = 550.0;
             jogador.esta_no_chao = false;
         }
     }
 }
 
-fn mover_jogador(mut query: Query<(&mut Transform, &mut Sprite, &Jogador)>) {
+fn mover_jogador(time: Res<Time>, mut query: Query<(&mut Transform, &mut Sprite, &Jogador)>) {
+    let delta = time.delta_seconds();
     for (mut transform, mut sprite, jogador) in query.iter_mut() {
-        transform.translation.x += jogador.velocidade_x * 0.016;
+        transform.translation.x += jogador.velocidade_x * delta;
+        
         if transform.translation.x < -160.0 { transform.translation.x = -160.0; }
         if transform.translation.x > 160.0 { transform.translation.x = 160.0; }
 
-        // Faz o boneco olhar para a direção certa de movimento baseado na sua velocidade_x estável
-        if jogador.velocidade_x > 0.0 {
+        if jogador.velocidade_x > 0.1 {
             sprite.flip_x = false;
-        } else if jogador.velocidade_x < 0.0 {
+        } else if jogador.velocidade_x < -0.1 {
             sprite.flip_x = true;
         }
     }
@@ -249,26 +227,23 @@ fn animate_player(
     mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Jogador)>,
 ) {
     for (mut timer, mut atlas, jogador) in query.iter_mut() {
-        timer.0.tick(time.delta());
-        
-        if timer.0.just_finished() {
-            let is_moving = jogador.velocidade_x.abs() > 0.1;
+        // Checa se o boneco tem velocidade relevante para os lados
+        let is_moving = jogador.velocidade_x.abs() > 0.1;
 
-            if is_moving {
-                // --- ANIMAÇÃO DE CORRIDA (Frames 4 a 7) ---
+        if is_moving {
+            // Se estiver andando, roda a animação da segunda linha (frames 4 a 7)
+            timer.0.tick(time.delta());
+            if timer.0.just_finished() {
                 if atlas.index < 4 || atlas.index > 7 {
                     atlas.index = 4;
                 } else {
                     atlas.index = 4 + ((atlas.index - 4 + 1) % 4);
                 }
-            } else {
-                // --- ANIMAÇÃO DE PARADO (Frames 0 a 3) ---
-                if atlas.index > 3 {
-                    atlas.index = 0;
-                } else {
-                    atlas.index = (atlas.index + 1) % 4;
-                }
             }
+        } else {
+            // SE ESTIVER PARADO: Força o frame a voltar e cravar no índice 0.
+            // Isso mata qualquer loop de caminhada fantasma.
+            atlas.index = 0;
         }
     }
 }

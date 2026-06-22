@@ -49,7 +49,7 @@ fn setup(
     let frame_largura = 313; 
     // SE ELE CONTINUAR CORTADO DA CINTURA PARA BAIXO, aumente este valor abaixo (ex: 400, 420) 
     // até que as pernas apareçam por completo e a grade se alinhe!
-    let frame_altura = 313;  
+    let frame_altura = 360;  
 
     let layout = TextureAtlasLayout::from_grid(
         UVec2::new(frame_largura, frame_altura), 

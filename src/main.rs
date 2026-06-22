@@ -45,19 +45,34 @@ fn setup(
     // Câmera do jogo
     commands.spawn(Camera2dBundle::default());
 
-    // --- 3. CORREÇÃO DO CORTE (Largura vs Altura do Frame) ---
-    let frame_largura = 313; 
-    // SE ELE CONTINUAR CORTADO DA CINTURA PARA BAIXO, aumente este valor abaixo (ex: 400, 420) 
-    // até que as pernas apareçam por completo e a grade se alinhe!
-    let frame_altura = 360;  
+    // --- 3. SOLUÇÃO DEFINITIVA DO CORTE (Precisão Cirúrgica por Frame) ---
+    // Como a largura total é 1254 e a altura de cada linha é 370 (totalizando 4 linhas = 1480 de altura)
+    let mut layout = TextureAtlasLayout::new_empty(UVec2::new(1254, 1480));
 
-    let layout = TextureAtlasLayout::from_grid(
-        UVec2::new(frame_largura, frame_altura), 
-        4, // 4 colunas
-        4, // 4 linhas
-        None, 
-        None
-    );
+    // LINHA 1 (Frames 0 a 3) - Parado
+    layout.add_sprite(URect::new(0,   0, 314,  370));  // Frame 0 (Largura: 314)
+    layout.add_sprite(URect::new(314, 0, 627,  370));  // Frame 1 (Largura: 313)
+    layout.add_sprite(URect::new(627, 0, 941,  370));  // Frame 2 (Largura: 314)
+    layout.add_sprite(URect::new(941, 0, 1254, 370));  // Frame 3 (Largura: 313)
+
+    // LINHA 2 (Frames 4 a 7) - Correndo
+    layout.add_sprite(URect::new(0,   370, 314,  740)); // Frame 4
+    layout.add_sprite(URect::new(314, 370, 627,  740)); // Frame 5
+    layout.add_sprite(URect::new(627, 370, 941,  740)); // Frame 6
+    layout.add_sprite(URect::new(941, 370, 1254, 740)); // Frame 7
+
+    // LINHA 3 (Frames 8 a 11) - Caso use futuramente
+    layout.add_sprite(URect::new(0,   740, 314,  1110)); // Frame 8
+    layout.add_sprite(URect::new(314, 740, 627,  1110)); // Frame 9
+    layout.add_sprite(URect::new(627, 740, 941,  1110)); // Frame 10
+    layout.add_sprite(URect::new(941, 740, 1254, 1110)); // Frame 11
+
+    // LINHA 4 (Frames 12 a 15) - Caso use futuramente
+    layout.add_sprite(URect::new(0,   1110, 314,  1480)); // Frame 12
+    layout.add_sprite(URect::new(314, 1110, 627,  1480)); // Frame 13
+    layout.add_sprite(URect::new(627, 1110, 941,  1480)); // Frame 14
+    layout.add_sprite(URect::new(941, 1110, 1254, 1480)); // Frame 15
+
     let layout_handle = texture_atlas_layouts.add(layout);
 
     // O nosso herói agora usando o Spritesheet Animado e a sua struct Jogador original
@@ -229,9 +244,6 @@ fn mover_jogador(mut query: Query<(&mut Transform, &mut Sprite, &Jogador)>) {
     }
 }
 
-// --- 2. CORREÇÃO DA ANIMAÇÃO INFINITA ---
-// Agora a animação escuta diretamente a sua struct estável de movimento (`jogador.velocidade_x`).
-// Quando ninguém aperta nada, a velocidade zera na hora, forçando o estado parado (Frames 0 a 3).
 fn animate_player(
     time: Res<Time>,
     mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Jogador)>,

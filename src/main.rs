@@ -4,18 +4,19 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game - Fase 3: Gamificação & XP".into(),
+                title: "Retro Game - Fase 4: Geração Infinita".into(),
                 resolution: (360.0, 640.0).into(),
                 ..default()
             }),
             ..default()
         }))
-        // Inicializa o estado global de progresso do jogador (Gamificação)
         .insert_resource(Progresso {
             xp: 0,
             nivel: 1,
             pontuacao: 0,
         })
+        // NOVO: Inicializa o timer que vai gerar novos itens a cada 2.5 segundos
+        .insert_resource(TimerSpawn(Timer::from_seconds(2.5, TimerMode::Repeating)))
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -24,15 +25,16 @@ fn main() {
                 controle_joystick,
                 mover_jogador,
                 animate_player,
-                detectar_coleta, // Novo sistema de colisão com itens
-                atualizar_hud,   // Novo sistema que renderiza o XP e Nível na tela
+                detectar_coleta,
+                atualizar_hud,
+                gerar_itens_procedurais, // Novo sistema de spawn infinito
             )
                 .chain(),
         )
         .run();
 }
 
-// --- COMPONENTES & RECURSOS DE GAMIFICAÇÃO ---
+// --- COMPONENTES & RECURSOS ---
 
 #[derive(Resource)]
 struct Progresso {
@@ -40,6 +42,10 @@ struct Progresso {
     nivel: u32,
     pontuacao: u32,
 }
+
+// NOVO: Timer global para controlar o fluxo de novos coletáveis
+#[derive(Resource)]
+struct TimerSpawn(Timer);
 
 #[derive(Component)]
 struct Coletavel {
@@ -49,8 +55,6 @@ struct Coletavel {
 
 #[derive(Component)]
 struct TextoHUD;
-
-// --- DEMAIS COMPONENTES ---
 
 #[derive(Component)]
 struct Jogador {
@@ -83,14 +87,7 @@ fn setup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    // Configuração do Spritesheet do jogador
-    let layout = TextureAtlasLayout::from_grid(
-        UVec2::new(314, 370),
-        4,
-        4,
-        None,
-        None,
-    );
+    let layout = TextureAtlasLayout::from_grid(UVec2::new(314, 370), 4, 4, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
     let textura_personagem = asset_server.load("meu_personagem_spritesheet.png");
 
@@ -113,7 +110,7 @@ fn setup(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 
-    // --- ELEMENTOS DO CENÁRIO (Fase 2) ---
+    // --- CENÁRIO FIXO ---
     // Chão
     commands.spawn((
         SpriteBundle {
@@ -156,22 +153,7 @@ fn setup(
         Plataforma { tamanho: Vec2::new(140.0, 15.0) },
     ));
 
-    // --- NOVO: POPULANDO O MUNDO COM COLETÁVEIS (Fase 3) ---
-    // Item 1: No chão (representando uma tarefa fácil concluída)
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::srgb(0.9, 0.8, 0.1), // Amarelo/Dourado
-                custom_size: Some(Vec2::new(16.0, 16.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(-100.0, -80.0, 1.5),
-            ..default()
-        },
-        Coletavel { valor_xp: 30, valor_pontos: 100 },
-    ));
-
-    // Item 2: Na plataforma da esquerda
+    // Inicializamos apenas 1 item inicial para o jogador ver logo de cara
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -179,28 +161,13 @@ fn setup(
                 custom_size: Some(Vec2::new(16.0, 16.0)),
                 ..default()
             },
-            transform: Transform::from_xyz(-70.0, 20.0, 1.5),
+            transform: Transform::from_xyz(0.0, -80.0, 1.5),
             ..default()
         },
-        Coletavel { valor_xp: 40, valor_pontos: 150 },
+        Coletavel { valor_xp: 25, valor_pontos: 100 },
     ));
 
-    // Item 3: Na plataforma mais alta (um desafio maior, dá mais recompensa!)
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::srgb(0.2, 0.8, 1.0), // Azul Ciano brilhante
-                custom_size: Some(Vec2::new(18.0, 18.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(70.0, 125.0, 1.5),
-            ..default()
-        },
-        Coletavel { valor_xp: 50, valor_pontos: 300 },
-    ));
-
-
-    // --- NOVO: INTERFACE DO USUÁRIO - HUD DE PROGRESSO (Fase 3) ---
+    // HUD de Status
     commands.spawn((
         TextBundle::from_section(
             "Carregando status...",
@@ -219,8 +186,7 @@ fn setup(
         TextoHUD,
     ));
 
-
-    // --- CONTROLES VIRTUAIS ---
+    // CONTROLES VIRTUAIS
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
@@ -261,7 +227,47 @@ fn setup(
     ));
 }
 
-// --- NOVO: SISTEMA DE DETECÇÃO DE RECOMPENSAS & LEVEL UP ---
+// --- NOVO: SISTEMA DE GERAÇÃO PROCEDURAL INFINITA ---
+fn gerar_itens_procedurais(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut timer_spawn: ResMut<TimerSpawn>,
+) {
+    // Avança o timer baseado no delta time do frame
+    timer_spawn.0.tick(time.delta());
+
+    if timer_spawn.0.just_finished() {
+        let segundos_corridos = time.elapsed_seconds();
+
+        // Algoritmo matemático para gerar posições determinísticas pseudo-aleatórias
+        // Usamos o seno e cosseno do tempo para criar variações caóticas estáveis de X e Y
+        let pos_x = (segundos_corridos * 4.5).sin() * 140.0; 
+        let pos_y = -50.0 + (segundos_corridos * 2.3).cos() * 130.0;
+
+        // Variação de cor baseada no tempo (alterna entre Dourado/Amarelo e Ciano de alta recompensa)
+        let eh_item_raro = (segundos_corridos as u32) % 3 == 0;
+        let cor = if eh_item_raro { Color::srgb(0.2, 0.8, 1.0) } else { Color::srgb(0.9, 0.8, 0.1) };
+        let xp = if eh_item_raro { 45 } else { 20 };
+        let pontos = if eh_item_raro { 250 } else { 80 };
+
+        // Realiza o spawn do novo item gerado dinamicamente
+        commands.spawn((
+            SpriteBundle {
+                sprite: Sprite {
+                    color: cor,
+                    custom_size: Some(Vec2::new(16.0, 16.0)),
+                    ..default()
+                },
+                transform: Transform::from_xyz(pos_x, pos_y, 1.5),
+                ..default()
+            },
+            Coletavel { valor_xp: xp, valor_pontos: pontos },
+        ));
+    }
+}
+
+// --- SISTEMAS DE LOOP, FISICA E UI (Fase 3) ---
+
 fn detectar_coleta(
     mut commands: Commands,
     query_jogador: Query<&Transform, With<Jogador>>,
@@ -270,29 +276,22 @@ fn detectar_coleta(
 ) {
     if let Ok(trans_jog) = query_jogador.get_single() {
         let jog_pos = trans_jog.translation;
-        
-        // Caixa de colisão aproximada do jogador escalado
         let jog_meia_largura = 30.0;
         let jog_meia_altura = 75.0;
 
         for (entidade_item, trans_item, coletavel) in query_coletaveis.iter() {
             let item_pos = trans_item.translation;
-            let item_meia_tam = 9.0; // metade do tamanho do sprite do item
+            let item_meia_tam = 9.0;
 
-            // Checagem de colisão AABB clássica (Overlapping)
             if jog_pos.x + jog_meia_largura > item_pos.x - item_meia_tam
                 && jog_pos.x - jog_meia_largura < item_pos.x + item_meia_tam
                 && jog_pos.y + jog_meia_altura > item_pos.y - item_meia_tam
                 && jog_pos.y - jog_meia_altura < item_pos.y + item_meia_tam
             {
-                // 1. Consome o item destruindo a entidade do motor
                 commands.entity(entidade_item).despawn();
-
-                // 2. Incrementa o score global e o XP
                 progresso.pontuacao += coletavel.valor_pontos;
                 progresso.xp += coletavel.valor_xp;
 
-                // 3. Mecânica clássica de Level Up (Sobe a cada 100 XP)
                 if progresso.xp >= 100 {
                     progresso.xp -= 100;
                     progresso.nivel += 1;
@@ -303,21 +302,14 @@ fn detectar_coleta(
     }
 }
 
-// --- NOVO: ATUALIZAÇÃO DA INTERFACE HUD ---
-fn atualizar_hud(
-    progresso: Res<Progresso>,
-    mut query_texto: Query<&mut Text, With<TextoHUD>>,
-) {
+fn atualizar_hud(progresso: Res<Progresso>, mut query_texto: Query<&mut Text, With<TextoHUD>>) {
     if let Ok(mut text) = query_texto.get_single_mut() {
-        // Atualiza a seção de texto dinâmica nativa do Bevy 0.14
         text.sections[0].value = format!(
             "NÍVEL: {}  |  XP: {}/100\nPONTOS: {}",
             progresso.nivel, progresso.xp, progresso.pontuacao
         );
     }
 }
-
-// --- FISICA, MOVIMENTAÇÃO E ANIMAÇÃO (Mantidos da Fase 2) ---
 
 fn aplicar_gravidade(
     time: Res<Time>,
@@ -334,7 +326,6 @@ fn aplicar_gravidade(
 
         let proximo_y = transform_jog.translation.y + jogador.velocidade_y * delta;
         let jog_x = transform_jog.translation.x;
-
         let jogador_meia_largura = 35.0;
         let jogador_meia_altura = 92.0;
 
@@ -400,13 +391,8 @@ fn controle_joystick(
                     let pos_base = transform_base.translation.truncate();
                     if pos_mouse_bevy.distance(pos_base) < 120.0 {
                         let delta_x = pos_mouse_bevy.x - pos_base.x;
-                        if delta_x > 15.0 {
-                            direcao_x = 1.0;
-                            offset_manete_x = 25.0;
-                        } else if delta_x < -15.0 {
-                            direcao_x = -1.0;
-                            offset_manete_x = -25.0;
-                        }
+                        if delta_x > 15.0 { direcao_x = 1.0; offset_manete_x = 25.0; }
+                        else if delta_x < -15.0 { direcao_x = -1.0; offset_manete_x = -25.0; }
                     }
                 }
 
@@ -424,22 +410,14 @@ fn controle_joystick(
         transform_manete.translation.x = offset_manete_x;
     }
 
-    if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
-        direcao_x = -1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
-        direcao_x = 1.0;
-    }
-    if keyboard_input.just_pressed(KeyCode::Space)
-        || keyboard_input.just_pressed(KeyCode::KeyW)
-        || keyboard_input.just_pressed(KeyCode::ArrowUp)
-    {
+    if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) { direcao_x = -1.0; }
+    if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) { direcao_x = 1.0; }
+    if keyboard_input.just_pressed(KeyCode::Space) || keyboard_input.just_pressed(KeyCode::KeyW) || keyboard_input.just_pressed(KeyCode::ArrowUp) {
         tentou_pular = true;
     }
 
     for mut jogador in query_jogador.iter_mut() {
         jogador.velocidade_x = direcao_x * 250.0;
-
         if tentou_pular && jogador.esta_no_chao {
             jogador.velocidade_y = 570.0;
             jogador.esta_no_chao = false;
@@ -451,33 +429,21 @@ fn mover_jogador(time: Res<Time>, mut query: Query<(&mut Transform, &mut Sprite,
     let delta = time.delta_seconds();
     for (mut transform, mut sprite, jogador) in query.iter_mut() {
         transform.translation.x += jogador.velocidade_x * delta;
-
         if transform.translation.x < -160.0 { transform.translation.x = -160.0; }
         if transform.translation.x > 160.0 { transform.translation.x = 160.0; }
 
-        if jogador.velocidade_x > 0.1 {
-            sprite.flip_x = false;
-        } else if jogador.velocidade_x < -0.1 {
-            sprite.flip_x = true;
-        }
+        if jogador.velocidade_x > 0.1 { sprite.flip_x = false; }
+        else if jogador.velocidade_x < -0.1 { sprite.flip_x = true; }
     }
 }
 
-fn animate_player(
-    time: Res<Time>,
-    mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Jogador)>,
-) {
+fn animate_player(time: Res<Time>, mut query: Query<(&mut AnimationTimer, &mut TextureAtlas, &Jogador)>) {
     for (mut timer, mut atlas, jogador) in query.iter_mut() {
-        let is_moving = jogador.velocidade_x.abs() > 0.1;
-
-        if is_moving {
+        if jogador.velocidade_x.abs() > 0.1 {
             timer.0.tick(time.delta());
             if timer.0.just_finished() {
-                if atlas.index < 4 || atlas.index > 7 {
-                    atlas.index = 4;
-                } else {
-                    atlas.index = 4 + ((atlas.index - 4 + 1) % 4);
-                }
+                if atlas.index < 4 || atlas.index > 7 { atlas.index = 4; }
+                else { atlas.index = 4 + ((atlas.index - 4 + 1) % 4); }
             }
         } else {
             atlas.index = 0;

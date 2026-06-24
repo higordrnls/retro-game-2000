@@ -4,12 +4,13 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game - Versão Corrigida".into(),
+                title: "Retro Game - Com Tela de Início".into(),
                 resolution: (360.0, 640.0).into(),
                 ..default()
             }),
             ..default()
         }))
+        .init_state::<GameState>() // 1. Inicializa o controle de estados do jogo
         .insert_resource(Progresso {
             xp: 0,
             nivel: 1,
@@ -18,24 +19,42 @@ fn main() {
         .insert_resource(EstadoMundo {
             proximo_spawn_x: 300.0,
         })
-        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_camera) // A câmera nasce junto com o aplicativo
+        
+        // --- FLUXO DA TELA DE INÍCIO (MENU) ---
+        .add_systems(OnEnter(GameState::Menu), setup_menu)
+        .add_systems(Update, (atualizar_menu, piscar_texto_menu).run_if(in_state(GameState::Menu)))
+        .add_systems(OnExit(GameState::Menu), limpar_menu)
+        
+        // --- FLUXO DO JOGO ATIVO (PLAYING) ---
+        .add_systems(OnEnter(GameState::Playing), setup_jogo)
         .add_systems(
             Update,
             (
-                controle_joystick,       // 1. Escuta seus comandos (Manual)
-                mover_jogador,           // 2. Aplica os comandos de movimento
-                aplicar_gravidade,       // 3. Calcula queda física
-                gerenciar_morte,         // 4. NOVO: Reseta tudo pro início real se cair
-                seguir_camera,           // 5. Câmera centralizada clássica
-                gerar_mundo_procedural,  // 6. Cria o mundo MUITO à frente (Invisível)
-                limpar_mundo_antigo,     // 7. Remove o que ficou muito para trás
-                detectar_coleta,         // 8. Verifica itens coletados
-                atualizar_hud,           // 9. Atualiza a interface
-                animate_player,          // 10. Controla os sprites de corrida
+                controle_joystick,       
+                mover_jogador,           
+                aplicar_gravidade,       
+                gerenciar_morte,         
+                seguir_camera,           
+                gerar_mundo_procedural,  
+                limpar_mundo_antigo,     
+                detectar_coleta,         
+                atualizar_hud,           
+                animate_player,          
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(GameState::Playing)), // Só roda se estiver jogando!
         )
         .run();
+}
+
+// --- CONFIGURAÇÃO DE ESTADOS ---
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+enum GameState {
+    #[default]
+    Menu,
+    Playing,
 }
 
 // --- COMPONENTES & RECURSOS ---
@@ -50,6 +69,14 @@ struct Progresso {
 #[derive(Resource)]
 struct EstadoMundo {
     proximo_spawn_x: f32,
+}
+
+#[derive(Component)]
+struct ElementoMenu;
+
+#[derive(Component)]
+struct TextoPiscante {
+    timer: Timer,
 }
 
 #[derive(Component)]
@@ -82,14 +109,102 @@ struct ManeteJoystick;
 #[derive(Component)]
 struct BotaoPulo;
 
-fn setup(
+// --- SISTEMAS EXCLUSIVOS DA TELA DE INÍCIO (MENU) ---
+
+fn setup_camera(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
+}
+
+fn setup_menu(mut commands: Commands) {
+    // Container principal da interface (Flexbox Centralizado)
+    commands.spawn((
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            ..default()
+        },
+        ElementoMenu,
+    )).with_children(|parent| {
+        // Título Principal do Jogo
+        parent.spawn(
+            TextBundle::from_section(
+                "RUST RUNNER",
+                TextStyle {
+                    font_size: 42.0,
+                    color: Color::srgb(0.0, 0.9, 0.6), // Verde Neon Retro
+                    ..default()
+                },
+            ).with_style(Style {
+                margin: UiRect::bottom(Val::Px(50.0)),
+                ..default()
+            })
+        );
+
+        // Subtítulo de Instrução (vai piscar)
+        parent.spawn((
+            TextBundle::from_section(
+                "PRESSIONE ESPAÇO\nPARA COMEÇAR",
+                TextStyle {
+                    font_size: 18.0,
+                    color: Color::WHITE,
+                    ..default()
+                },
+            ),
+            TextoPiscante {
+                timer: Timer::from_seconds(0.5, TimerMode::Repeating),
+            },
+        ));
+    });
+}
+
+// Sistema que detecta a entrada do jogador para iniciar a gameplay
+fn atualizar_menu(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) || mouse_input.just_pressed(MouseButton::Left) {
+        next_state.set(GameState::Playing); // Altera o estado do app para rodar o jogo!
+    }
+}
+
+// Faz o texto do Menu piscar estilo fliperama
+fn piscar_texto_menu(time: Res<Time>, mut query: Query<(&mut Visibility, &mut TextoPiscante)>) {
+    for (mut visibility, mut pisca) in query.iter_mut() {
+        pisca.timer.tick(time.delta());
+        if pisca.timer.just_finished() {
+            *visibility = match *visibility {
+                Visibility::Visible => Visibility::Hidden,
+                _ => Visibility::Visible,
+            };
+        }
+    }
+}
+
+// Remove os elementos visuais do menu da tela ao sair do estado de Menu
+fn limpar_menu(mut commands: Commands, query: Query<Entity, With<ElementoMenu>>) {
+    for entidade in query.iter() {
+        commands.entity(entidade).despawn_recursive();
+    }
+}
+
+// --- SISTEMAS DE GAMEPLAY (PLAYING) ---
+
+fn setup_jogo(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    query_camera: Query<Entity, With<Camera>>,
 ) {
-    let camera_entity = commands.spawn(Camera2dBundle::default()).id();
+    let camera_entity = query_camera.single();
 
-    // Controles Virtuais fixados na Câmera
+    // Controles Virtuais fixados na Câmera existente
     commands.entity(camera_entity).with_children(|parent| {
         parent.spawn((
             SpriteBundle {
@@ -147,7 +262,7 @@ fn setup(
             index: 0,
         },
         Jogador {
-            velocidade_x: 0.0, // Começa parado! Controle é 100% seu agora
+            velocidade_x: 0.0, 
             velocidade_y: 0.0,
             esta_no_chao: false,
         },
@@ -187,7 +302,6 @@ fn setup(
     ));
 }
 
-// --- CONTROLE 100% MANUAL E TRADICIONAL ---
 fn controle_joystick(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
@@ -201,7 +315,6 @@ fn controle_joystick(
     let mut offset_manete_x = 0.0;
     let mut tentou_pular = false;
 
-    // Joystick Virtual
     if mouse_input.pressed(MouseButton::Left) {
         if let Some(window) = windows.iter().next() {
             if let Some(pos_cursor) = window.cursor_position() {
@@ -233,7 +346,6 @@ fn controle_joystick(
         transform_manete.translation.x = offset_manete_x;
     }
 
-    // Teclado (Sobrepõe o joystick se pressionado)
     if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) { direcao_x = -1.0; }
     if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) { direcao_x = 1.0; }
     if keyboard_input.just_pressed(KeyCode::Space) || keyboard_input.just_pressed(KeyCode::KeyW) || keyboard_input.just_pressed(KeyCode::ArrowUp) {
@@ -241,7 +353,6 @@ fn controle_joystick(
     }
 
     for mut jogador in query_jogador.iter_mut() {
-        // Velocidade controlada estritamente por onde você aperta
         jogador.velocidade_x = direcao_x * 240.0;
 
         if tentou_pular && jogador.esta_no_chao {
@@ -261,7 +372,6 @@ fn mover_jogador(time: Res<Time>, mut query: Query<(&mut Transform, &mut Sprite,
     }
 }
 
-// --- NOVO: SISTEMA QUE CORRIGE O RESET E DELETA O LAG ---
 fn gerenciar_morte(
     mut commands: Commands,
     mut query_jogador: Query<(&mut Transform, &mut Jogador)>,
@@ -270,24 +380,17 @@ fn gerenciar_morte(
     mut progresso: ResMut<Progresso>,
 ) {
     if let Ok((mut trans_jog, mut jogador)) = query_jogador.get_single_mut() {
-        // Se cair abaixo da linha da tela (-350)
         if trans_jog.translation.y < -350.0 {
-            
-            // 1. Limpa absolutamente todas as entidades antigas para matar o lag de acúmulo
             for entidade in query_objetos.iter() {
                 commands.entity(entidade).despawn();
             }
 
-            // 2. Teleporta o jogador de volta para o INÍCIO REAL do jogo
             trans_jog.translation = Vec3::new(0.0, 200.0, 2.0);
             jogador.velocidade_x = 0.0;
             jogador.velocidade_y = 0.0;
             jogador.esta_no_chao = false;
-
-            // 3. Reseta a esteira de criação procedural para o começo
             estado_mundo.proximo_spawn_x = 300.0;
 
-            // 4. Recria a plataforma inicial segura no ponto zero
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
@@ -301,36 +404,30 @@ fn gerenciar_morte(
                 Plataforma { tamanho: Vec2::new(500.0, 20.0) },
             ));
 
-            // Penalidade: Mantém seu nível de progresso, mas limpa os pontos obtidos naquela tentativa
             progresso.pontuacao = 0;
             progresso.xp = 0;
-            println!("💀 Game Over! Todo o mapa foi resetado. Voltando ao início...");
+            println!("💀 Game Over! Voltando ao início da rodada...");
         }
     }
 }
 
-// --- CÂMERA CENTRALIZADA CLÁSSICA ---
 fn seguir_camera(
     query_jogador: Query<&Transform, With<Jogador>>,
     mut query_camera: Query<&mut Transform, (With<Camera2d>, Without<Jogador>)>,
 ) {
     if let Ok(trans_jog) = query_jogador.get_single() {
         if let Ok(mut trans_cam) = query_camera.get_single_mut() {
-            // A câmera fica presa exatamente no centro do personagem
             trans_cam.translation.x = trans_jog.translation.x;
         }
     }
 }
 
-// --- GERAÇÃO PROCEDURAL SEAMLESS (INVISÍVEL) ---
 fn gerar_mundo_procedural(
     mut commands: Commands,
     query_jogador: Query<&Transform, With<Jogador>>,
     mut estado_mundo: ResMut<EstadoMundo>,
 ) {
     if let Ok(trans_jog) = query_jogador.get_single() {
-        // CORREÇÃO: Aumentado para 1200 pixels à frente do jogador.
-        // Como a câmera só exibe até 180px à frente, os blocos nascem totalmente fora de vista.
         while estado_mundo.proximo_spawn_x < trans_jog.translation.x + 1200.0 {
             let current_x = estado_mundo.proximo_spawn_x;
 
@@ -376,7 +473,6 @@ fn limpar_mundo_antigo(
     query_objetos: Query<(Entity, &Transform), Or<(With<Plataforma>, With<Coletavel>)>>,
 ) {
     if let Ok(trans_jog) = query_jogador.get_single() {
-        // Limpa o que ficou muito para trás (600px) para economizar processamento
         let limite_traseiro = trans_jog.translation.x - 600.0;
         for (entidade, transform) in query_objetos.iter() {
             if transform.translation.x < limite_traseiro {

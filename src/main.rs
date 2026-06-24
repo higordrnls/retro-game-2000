@@ -4,13 +4,14 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Retro Game - Com Tela de Início".into(),
+                title: "Rust Runner - Edição Floresta de Musgo".into(),
                 resolution: (360.0, 640.0).into(),
                 ..default()
             }),
             ..default()
         }))
-        .init_state::<GameState>() // 1. Inicializa o controle de estados do jogo
+        .insert_resource(ClearColor(Color::srgb(0.04, 0.06, 0.12))) // 1. Fundo azul-escuro da floresta à noite
+        .init_state::<GameState>()
         .insert_resource(Progresso {
             xp: 0,
             nivel: 1,
@@ -19,7 +20,7 @@ fn main() {
         .insert_resource(EstadoMundo {
             proximo_spawn_x: 300.0,
         })
-        .add_systems(Startup, setup_camera) // A câmera nasce junto com o aplicativo
+        .add_systems(Startup, setup_camera)
         
         // --- FLUXO DA TELA DE INÍCIO (MENU) ---
         .add_systems(OnEnter(GameState::Menu), setup_menu)
@@ -41,9 +42,10 @@ fn main() {
                 detectar_coleta,         
                 atualizar_hud,           
                 animate_player,          
+                animar_coletaveis, // 2. Novo sistema para dar vida aos cristais
             )
                 .chain()
-                .run_if(in_state(GameState::Playing)), // Só roda se estiver jogando!
+                .run_if(in_state(GameState::Playing)),
         )
         .run();
 }
@@ -109,14 +111,13 @@ struct ManeteJoystick;
 #[derive(Component)]
 struct BotaoPulo;
 
-// --- SISTEMAS EXCLUSIVOS DA TELA DE INÍCIO (MENU) ---
+// --- TELA DE INÍCIO (MENU) ---
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
 fn setup_menu(mut commands: Commands) {
-    // Container principal da interface (Flexbox Centralizado)
     commands.spawn((
         NodeBundle {
             style: Style {
@@ -131,13 +132,12 @@ fn setup_menu(mut commands: Commands) {
         },
         ElementoMenu,
     )).with_children(|parent| {
-        // Título Principal do Jogo
         parent.spawn(
             TextBundle::from_section(
                 "RUST RUNNER",
                 TextStyle {
                     font_size: 42.0,
-                    color: Color::srgb(0.0, 0.9, 0.6), // Verde Neon Retro
+                    color: Color::srgb(0.0, 0.9, 0.6), 
                     ..default()
                 },
             ).with_style(Style {
@@ -146,7 +146,6 @@ fn setup_menu(mut commands: Commands) {
             })
         );
 
-        // Subtítulo de Instrução (vai piscar)
         parent.spawn((
             TextBundle::from_section(
                 "PRESSIONE ESPAÇO\nPARA COMEÇAR",
@@ -163,18 +162,16 @@ fn setup_menu(mut commands: Commands) {
     });
 }
 
-// Sistema que detecta a entrada do jogador para iniciar a gameplay
 fn atualizar_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) || mouse_input.just_pressed(MouseButton::Left) {
-        next_state.set(GameState::Playing); // Altera o estado do app para rodar o jogo!
+        next_state.set(GameState::Playing);
     }
 }
 
-// Faz o texto do Menu piscar estilo fliperama
 fn piscar_texto_menu(time: Res<Time>, mut query: Query<(&mut Visibility, &mut TextoPiscante)>) {
     for (mut visibility, mut pisca) in query.iter_mut() {
         pisca.timer.tick(time.delta());
@@ -187,14 +184,13 @@ fn piscar_texto_menu(time: Res<Time>, mut query: Query<(&mut Visibility, &mut Te
     }
 }
 
-// Remove os elementos visuais do menu da tela ao sair do estado de Menu
 fn limpar_menu(mut commands: Commands, query: Query<Entity, With<ElementoMenu>>) {
     for entidade in query.iter() {
         commands.entity(entidade).despawn_recursive();
     }
 }
 
-// --- SISTEMAS DE GAMEPLAY (PLAYING) ---
+// --- JOGO ATIVO (PLAYING) ---
 
 fn setup_jogo(
     mut commands: Commands,
@@ -204,12 +200,12 @@ fn setup_jogo(
 ) {
     let camera_entity = query_camera.single();
 
-    // Controles Virtuais fixados na Câmera existente
+    // Controles com paleta cinza-azulada semi-transparente combinando com o tema
     commands.entity(camera_entity).with_children(|parent| {
         parent.spawn((
             SpriteBundle {
                 sprite: Sprite {
-                    color: Color::srgba(0.2, 0.2, 0.2, 0.6),
+                    color: Color::srgba(0.12, 0.16, 0.22, 0.5),
                     custom_size: Some(Vec2::new(100.0, 100.0)),
                     ..default()
                 },
@@ -221,7 +217,7 @@ fn setup_jogo(
             joystick_parent.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        color: Color::srgb(1.0, 1.0, 1.0),
+                        color: Color::srgba(0.4, 0.46, 0.55, 0.8),
                         custom_size: Some(Vec2::new(35.0, 35.0)),
                         ..default()
                     },
@@ -235,7 +231,7 @@ fn setup_jogo(
         parent.spawn((
             SpriteBundle {
                 sprite: Sprite {
-                    color: Color::srgb(0.0, 0.6, 0.9),
+                    color: Color::srgba(0.15, 0.35, 0.65, 0.6),
                     custom_size: Some(Vec2::new(75.0, 75.0)),
                     ..default()
                 },
@@ -250,7 +246,6 @@ fn setup_jogo(
     let layout_handle = texture_atlas_layouts.add(layout);
     let textura_personagem = asset_server.load("meu_personagem_spritesheet.png");
 
-    // Spawn do Jogador inicial
     commands.spawn((
         SpriteBundle {
             texture: textura_personagem,
@@ -269,11 +264,11 @@ fn setup_jogo(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 
-    // Plataforma Inicial do Ponto Zero
+    // Plataforma Inicial Estilizada (Rocha com Musgo acoplado)
     commands.spawn((
         SpriteBundle {
             sprite: Sprite {
-                color: Color::srgb(0.2, 0.6, 0.3),
+                color: Color::srgb(0.22, 0.16, 0.14), // Base de rocha escura
                 custom_size: Some(Vec2::new(500.0, 20.0)),
                 ..default()
             },
@@ -281,25 +276,46 @@ fn setup_jogo(
             ..default()
         },
         Plataforma { tamanho: Vec2::new(500.0, 20.0) },
-    ));
-
-    commands.spawn((
-        TextBundle::from_section(
-            "Modo Manual Ativo",
-            TextStyle {
-                font_size: 18.0,
-                color: Color::WHITE,
+    )).with_children(|parent| {
+        // Musgo superior da plataforma inicial
+        parent.spawn(SpriteBundle {
+            sprite: Sprite {
+                color: Color::srgb(0.18, 0.52, 0.24), // Verde Musgo Vibrante
+                custom_size: Some(Vec2::new(500.0, 4.0)),
                 ..default()
             },
-        )
-        .with_style(Style {
+            transform: Transform::from_xyz(0.0, 10.0 - 2.0, 0.1),
+            ..default()
+        });
+    });
+
+    // HUD Nova: Caixa de texto imitando placa de pedra medieval/retro
+    commands.spawn(NodeBundle {
+        style: Style {
             position_type: PositionType::Absolute,
             top: Val::Px(15.0),
             left: Val::Px(15.0),
+            padding: UiRect::all(Val::Px(10.0)),
+            border: UiRect::all(Val::Px(3.0)),
+            flex_direction: FlexDirection::Column,
             ..default()
-        }),
-        TextoHUD,
-    ));
+        },
+        background_color: Color::srgb(0.14, 0.17, 0.2).into(), // Fundo pedra escura
+        border_color: Color::srgb(0.32, 0.36, 0.4).into(),     // Contorno de pedra clara
+        ..default()
+    }).with_children(|parent| {
+        parent.spawn((
+            TextBundle::from_section(
+                "",
+                TextStyle {
+                    font_size: 15.0,
+                    color: Color::srgb(0.9, 0.9, 0.9),
+                    ..default()
+                },
+            ),
+            TextoHUD,
+        ));
+    });
 }
 
 fn controle_joystick(
@@ -381,8 +397,9 @@ fn gerenciar_morte(
 ) {
     if let Ok((mut trans_jog, mut jogador)) = query_jogador.get_single_mut() {
         if trans_jog.translation.y < -350.0 {
+            // Remove tudo recursivamente para evitar sobras de musgos soltos
             for entidade in query_objetos.iter() {
-                commands.entity(entidade).despawn();
+                commands.entity(entidade).despawn_recursive();
             }
 
             trans_jog.translation = Vec3::new(0.0, 200.0, 2.0);
@@ -394,7 +411,7 @@ fn gerenciar_morte(
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        color: Color::srgb(0.2, 0.6, 0.3),
+                        color: Color::srgb(0.22, 0.16, 0.14),
                         custom_size: Some(Vec2::new(500.0, 20.0)),
                         ..default()
                     },
@@ -402,7 +419,17 @@ fn gerenciar_morte(
                     ..default()
                 },
                 Plataforma { tamanho: Vec2::new(500.0, 20.0) },
-            ));
+            )).with_children(|parent| {
+                parent.spawn(SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::srgb(0.18, 0.52, 0.24),
+                        custom_size: Some(Vec2::new(500.0, 4.0)),
+                        ..default()
+                    },
+                    transform: Transform::from_xyz(0.0, 10.0 - 2.0, 0.1),
+                    ..default()
+                });
+            });
 
             progresso.pontuacao = 0;
             progresso.xp = 0;
@@ -435,10 +462,11 @@ fn gerar_mundo_procedural(
             let y_plataforma = -110.0 + (hash * 120.0);
             let largura_plataforma = 110.0 + (hash * 70.0);
 
+            // Gerando a Rocha Escura
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        color: Color::srgb(0.5, 0.3, 0.1),
+                        color: Color::srgb(0.25, 0.18, 0.15), // Pedra escura da floresta
                         custom_size: Some(Vec2::new(largura_plataforma, 15.0)),
                         ..default()
                     },
@@ -446,13 +474,25 @@ fn gerar_mundo_procedural(
                     ..default()
                 },
                 Plataforma { tamanho: Vec2::new(largura_plataforma, 15.0) },
-            ));
+            )).with_children(|parent| {
+                // Acoplando o Musgo Verde no topo da plataforma gerada
+                parent.spawn(SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::srgb(0.15, 0.55, 0.22), // Grama/Musgo verde brilhante
+                        custom_size: Some(Vec2::new(largura_plataforma, 4.0)),
+                        ..default()
+                    },
+                    transform: Transform::from_xyz(0.0, 7.5 - 2.0, 0.1),
+                    ..default()
+                });
+            });
 
+            // Cristal Amarelo de Ouro Brilhante
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        color: Color::srgb(0.9, 0.8, 0.1),
-                        custom_size: Some(Vec2::new(14.0, 14.0)),
+                        color: Color::srgb(1.0, 0.84, 0.0), // Amarelo Dourado
+                        custom_size: Some(Vec2::new(12.0, 12.0)),
                         ..default()
                     },
                     transform: Transform::from_xyz(current_x, y_plataforma + 35.0, 1.5),
@@ -476,7 +516,7 @@ fn limpar_mundo_antigo(
         let limite_traseiro = trans_jog.translation.x - 600.0;
         for (entidade, transform) in query_objetos.iter() {
             if transform.translation.x < limite_traseiro {
-                commands.entity(entidade).despawn();
+                commands.entity(entidade).despawn_recursive(); // Despawn com os filhos inclusos
             }
         }
     }
@@ -571,10 +611,17 @@ fn detectar_coleta(
     }
 }
 
+// Faz os cristais rodarem continuamente, gerando um efeito estético polido
+fn animar_coletaveis(time: Res<Time>, mut query: Query<&mut Transform, With<Coletavel>>) {
+    for mut transform in query.iter_mut() {
+        transform.rotate_z(2.0 * time.delta_seconds());
+    }
+}
+
 fn atualizar_hud(progresso: Res<Progresso>, mut query_texto: Query<&mut Text, With<TextoHUD>>) {
     if let Ok(mut text) = query_texto.get_single_mut() {
         text.sections[0].value = format!(
-            "NÍVEL: {}  |  XP: {}/100\nPONTOS: {}",
+            "🎖️ NÍVEL: {}  |  XP: {}/100\n💰 PONTOS: {}",
             progresso.nivel, progresso.xp, progresso.pontuacao
         );
     }

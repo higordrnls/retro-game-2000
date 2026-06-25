@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::input::touch::TouchPhase;
 
 // --- ESTADOS DO JOGO ---
 #[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
@@ -14,32 +13,39 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
+        .insert_resource(Progresso::default())
+        .insert_resource(EstadoMundo::default())
         // 1. Sistemas que rodam apenas UMA VEZ no início:
-        .add_systems(Startup, (
-            setup_camera, 
-            // coloque aqui qualquer outro setup que você tiver
-        ))
-        // 2. Sistemas que rodam TODO FRAME (Update):
-        .add_systems(Update, (
-            input_handler,
-            animate_player,        // <-- Agora ele vai parar de avisar!
-            atualizar_hud,         // <-- Adicione também
-            controle_joystick,     // Adicione seus outros sistemas aqui
-            mover_jogador,
-            gerenciar_morte,
-            gerar_mundo_procedural,
-            limpar_mundo_antigo,
-            setup_menu,
-            atualizar_menu,
-            piscar_texto_menu,
-            limpar_menu,
-            setup_jogo,
-            seguir_camera,
-            aplicar_gravidade,
-            detectar_coleta,
-            animar_coletaveis,
-            // ... adicione as outras que aparecem nos avisos
-        ).run_if(in_state(GameState::Playing))) // Rode tudo que for de jogo só se estiver Playing
+        .add_systems(Startup, setup_camera)
+        .add_systems(OnEnter(GameState::Menu), setup_menu)
+        .add_systems(
+            Update,
+            (
+                input_handler,
+                atualizar_menu,
+                piscar_texto_menu,
+            )
+                .run_if(in_state(GameState::Menu)),
+        )
+        .add_systems(OnExit(GameState::Menu), limpar_menu)
+        .add_systems(OnEnter(GameState::Playing), setup_jogo)
+        .add_systems(
+            Update,
+            (
+                animate_player,
+                atualizar_hud,
+                controle_joystick,
+                mover_jogador,
+                gerenciar_morte,
+                gerar_mundo_procedural,
+                limpar_mundo_antigo,
+                seguir_camera,
+                aplicar_gravidade,
+                detectar_coleta,
+                animar_coletaveis,
+            )
+                .run_if(in_state(GameState::Playing)),
+        )
         .run();
 }
 
@@ -72,7 +78,7 @@ fn input_handler(
 
 // --- COMPONENTES & RECURSOS ---
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 struct Progresso {
     xp: u32,
     nivel: u32,
@@ -82,6 +88,14 @@ struct Progresso {
 #[derive(Resource)]
 struct EstadoMundo {
     proximo_spawn_x: f32,
+}
+
+impl Default for EstadoMundo {
+    fn default() -> Self {
+        Self {
+            proximo_spawn_x: 300.0,
+        }
+    }
 }
 
 #[derive(Component)]

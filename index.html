@@ -3,35 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Game 2000 - Mobile Web</title>
+    <title>Retro Game 2000</title>
     <style>
-        body {
-            margin: 0;
-            background-color: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
-        canvas {
-            box-shadow: 0px 4px 20px rgba(0,0,0,0.8);
-        }
+        body { margin: 0; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        canvas { box-shadow: 0px 4px 20px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
-
-<script type="module">
-    // Caminhos relativos ajustados para rodar na raiz do servidor
-    import init, * as bindings from './meu_jogo_y2k-4285690c65216a32.js';
-    
-    async function run() {
-        const wasm = await init({ module_or_path: './meu_jogo_y2k-4285690c65216a32_bg.wasm' });
-        window.wasmBindings = bindings;
-    }
-    
-    run();
-</script>
-
+    <script type="module">
+        import init from './meu_jogo_y2k-4285690c65216a32.js';
+        init('./meu_jogo_y2k-4285690c65216a32_bg.wasm');
+    </script>
 </body>
 </html>

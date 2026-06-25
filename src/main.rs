@@ -66,6 +66,7 @@ fn input_handler(
     // Se qualquer um dos três aconteceu, muda para o jogo
     if iniciar {
         game_state.set(GameState::Playing);
+        println!("Mudando estado para Playing!");
     }
 }
 

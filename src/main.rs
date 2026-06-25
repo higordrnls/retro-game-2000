@@ -14,25 +14,23 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
-        // SISTEMAS QUE RODAM UMA VEZ SÓ (STARTUP)
+        // 1. Sistemas que rodam apenas UMA VEZ no início:
         .add_systems(Startup, (
-            setup_camera,
-            setup_menu, // <- Agora ele vai rodar!
-            setup_jogo,
+            setup_camera, 
+            // coloque aqui qualquer outro setup que você tiver
         ))
-        // SISTEMAS QUE RODAM TODO FRAME (UPDATE)
+        // 2. Sistemas que rodam TODO FRAME (Update):
         .add_systems(Update, (
             input_handler,
-            atualizar_menu,
-            piscar_texto_menu,
-            controle_joystick,
+            animate_player,        // <-- Agora ele vai parar de avisar!
+            atualizar_hud,         // <-- Adicione também
+            controle_joystick,     // Adicione seus outros sistemas aqui
             mover_jogador,
-            aplicar_gravidade,
-            seguir_camera,
-            detectar_coleta,
-            animar_coletaveis,
-            atualizar_hud,
-        ).run_if(in_state(GameState::Playing))) // Rode isso só se estiver jogando
+            gerenciar_morte,
+            gerar_mundo_procedural,
+            limpar_mundo_antigo,
+            // ... adicione as outras que aparecem nos avisos
+        ).run_if(in_state(GameState::Playing))) // Rode tudo que for de jogo só se estiver Playing
         .run();
 }
 

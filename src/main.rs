@@ -65,7 +65,7 @@ fn input_handler(
     if mouse_input.just_pressed(MouseButton::Left) { iniciar = true; }
     
     // Toque na tela (mobile)
-    if touches.any_just_pressed() {
+    if touches.any_just_pressed() || touches.iter().next().is_some() {
         iniciar = true;
     }
 
@@ -196,6 +196,7 @@ fn atualizar_menu(
     if keyboard_input.just_pressed(KeyCode::Space)
         || mouse_input.just_pressed(MouseButton::Left)
         || touches.any_just_pressed()
+        || touches.iter().next().is_some()
     {
         next_state.set(GameState::Playing);
     }

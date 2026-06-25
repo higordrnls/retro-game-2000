@@ -40,11 +40,11 @@
         function habilitarToqueNoCanvas() {
             const canvas = document.querySelector('canvas');
             if (!canvas) {
-                return;
+                return false;
             }
 
             if (canvas.dataset.touchBridgeInstalled === '1') {
-                return;
+                return true;
             }
 
             canvas.dataset.touchBridgeInstalled = '1';
@@ -103,19 +103,20 @@
                     dispararMouse('mouseup', touch, 0);
                 }
             }, { passive: false });
+
+            return true;
         }
 
         init('./meu_jogo_y2k-4285690c65216a32_bg.wasm').then(() => {
-            const tentativas = 30;
-            let contador = 0;
+            if (!habilitarToqueNoCanvas()) {
+                const observer = new MutationObserver(() => {
+                    if (habilitarToqueNoCanvas()) {
+                        observer.disconnect();
+                    }
+                });
 
-            const intervalo = setInterval(() => {
-                habilitarToqueNoCanvas();
-                if (document.querySelector('canvas') || contador >= tentativas) {
-                    clearInterval(intervalo);
-                }
-                contador += 1;
-            }, 100);
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
         });
     </script>
 </body>

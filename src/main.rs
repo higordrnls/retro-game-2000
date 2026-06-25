@@ -11,12 +11,17 @@ enum GameState {
 
 // --- FUNÇÃO PRINCIPAL ---
 fn main() {
+    fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .init_state::<GameState>() // Estado inicializado corretamente
-        .add_systems(Update, input_handler.run_if(in_state(GameState::Menu))) // Input funciona apenas no Menu
-        .add_systems(Startup, setup_camera) // Adicione aqui suas funções de startup
-        // ... (coloque aqui seus outros sistemas como controle_joystick, mover_jogador, etc)
+        .init_state::<GameState>()
+        .add_systems(Startup, setup_camera) // Se você tiver uma função de setup
+        .add_systems(Update, (
+            input_handler,      // O que criamos para o touch/teclado
+            animate_player,     // <--- ADICIONE ISSO
+            atualizar_hud,      // <--- ADICIONE ISSO
+            // adicione aqui os outros sistemas que faltam (ex: controle_joystick)
+        ))
         .run();
 }
 

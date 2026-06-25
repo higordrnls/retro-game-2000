@@ -62,46 +62,81 @@
                 }));
             };
 
-            canvas.addEventListener('touchstart', (evento) => {
+            const dispararPointer = (tipo, touch, botoes) => {
+                if (typeof PointerEvent === 'undefined') {
+                    return;
+                }
+
+                canvas.dispatchEvent(new PointerEvent(tipo, {
+                    bubbles: true,
+                    cancelable: true,
+                    pointerId: touch.identifier,
+                    pointerType: 'touch',
+                    isPrimary: true,
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    button: 0,
+                    buttons: botoes,
+                }));
+            };
+
+            const encaminharToque = (evento, fase) => {
                 if (evento.cancelable) {
                     evento.preventDefault();
                 }
 
                 for (const touch of evento.changedTouches) {
-                    dispararMouse('mousemove', touch, 1);
-                    dispararMouse('mousedown', touch, 1);
+                    if (fase === 'start') {
+                        dispararPointer('pointermove', touch, 1);
+                        dispararPointer('pointerdown', touch, 1);
+                        dispararMouse('mousemove', touch, 1);
+                        dispararMouse('mousedown', touch, 1);
+                    } else if (fase === 'move') {
+                        dispararPointer('pointermove', touch, 1);
+                        dispararMouse('mousemove', touch, 1);
+                    } else if (fase === 'end') {
+                        dispararPointer('pointerup', touch, 0);
+                        dispararMouse('mouseup', touch, 0);
+                        dispararMouse('click', touch, 0);
+                    } else if (fase === 'cancel') {
+                        dispararPointer('pointercancel', touch, 0);
+                        dispararMouse('mouseup', touch, 0);
+                    }
                 }
+            };
+
+            const opcoesToque = { passive: false, capture: true };
+
+            document.addEventListener('touchstart', (evento) => {
+                encaminharToque(evento, 'start');
+            }, opcoesToque);
+
+            document.addEventListener('touchmove', (evento) => {
+                encaminharToque(evento, 'move');
+            }, opcoesToque);
+
+            document.addEventListener('touchend', (evento) => {
+                encaminharToque(evento, 'end');
+            }, opcoesToque);
+
+            document.addEventListener('touchcancel', (evento) => {
+                encaminharToque(evento, 'cancel');
+            }, opcoesToque);
+
+            canvas.addEventListener('touchstart', (evento) => {
+                encaminharToque(evento, 'start');
             }, { passive: false });
 
             canvas.addEventListener('touchmove', (evento) => {
-                if (evento.cancelable) {
-                    evento.preventDefault();
-                }
-
-                for (const touch of evento.changedTouches) {
-                    dispararMouse('mousemove', touch, 1);
-                }
+                encaminharToque(evento, 'move');
             }, { passive: false });
 
             canvas.addEventListener('touchend', (evento) => {
-                if (evento.cancelable) {
-                    evento.preventDefault();
-                }
-
-                for (const touch of evento.changedTouches) {
-                    dispararMouse('mouseup', touch, 0);
-                    dispararMouse('click', touch, 0);
-                }
+                encaminharToque(evento, 'end');
             }, { passive: false });
 
             canvas.addEventListener('touchcancel', (evento) => {
-                if (evento.cancelable) {
-                    evento.preventDefault();
-                }
-
-                for (const touch of evento.changedTouches) {
-                    dispararMouse('mouseup', touch, 0);
-                }
+                encaminharToque(evento, 'cancel');
             }, { passive: false });
 
             return true;

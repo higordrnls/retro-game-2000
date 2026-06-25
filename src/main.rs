@@ -1,4 +1,32 @@
 use bevy::prelude::*;
+use bevy::input::touch::TouchPhase; // Não esquece de importar isso lá em cima!
+
+fn input_handler(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_input: Res<ButtonInput<MouseButton>>,
+    mut touch_events: EventReader<TouchInput>,
+    mut game_state: ResMut<NextState<GameState>>, 
+) {
+    let mut comando_de_start = false;
+
+    // Se apertar Espaço no teclado
+    if keyboard_input.just_pressed(KeyCode::Space) { comando_de_start = true; }
+    
+    // Se clicar com o mouse
+    if mouse_input.just_pressed(MouseButton::Left) { comando_de_start = true; }
+
+    // Se tocar na tela do celular
+    for event in touch_events.read() {
+        if event.phase == TouchPhase::Started {
+            comando_de_start = true;
+        }
+    }
+
+    // Se qualquer coisa aconteceu, a gente manda o jogo começar!
+    if comando_de_start {
+        game_state.set(GameState::Playing);
+    }
+}
 
 fn main() {
     App::new()
@@ -47,6 +75,12 @@ fn main() {
                 .chain()
                 .run_if(in_state(GameState::Playing)),
         )
+        .run();
+
+        .add_plugins(DefaultPlugins)
+        .add_state::<GameState>() 
+        // AQUI ESTÁ O SEGREDO:
+        .add_systems(Update, input_handler) 
         .run();
 }
 

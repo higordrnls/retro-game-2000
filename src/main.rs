@@ -29,7 +29,6 @@ fn main() {
             gerenciar_morte,
             gerar_mundo_procedural,
             limpar_mundo_antigo,
-            tamanho,
             setup_menu,
             atualizar_menu,
             piscar_texto_menu,

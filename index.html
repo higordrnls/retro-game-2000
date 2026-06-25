@@ -32,7 +32,7 @@
             -webkit-touch-callout: none;
         }
     </style>
-</head>
+<link rel="modulepreload" href="./meu_jogo_y2k-14809138a1169570.js" crossorigin="anonymous" integrity="sha384-fiWC87y+Vo03owDsUoyl8IXAZVc2Dxys1AH8QlK3fgCZk1qGeJ8WqYTJwaX0uO8p"><link rel="preload" href="./meu_jogo_y2k-14809138a1169570_bg.wasm" crossorigin="anonymous" integrity="sha384-iugSMSyOTTie6MlXiNg4edj9258sBeECA03Dqy25vLSIgsmp6dJ3EYM1QY2lrOYI" as="fetch" type="application/wasm"></head>
 <body>
     <script type="module">
         import init from './meu_jogo_y2k-4285690c65216a32.js';
@@ -154,5 +154,16 @@
             }
         });
     </script>
-</body>
+
+<script type="module">
+import init, * as bindings from './meu_jogo_y2k-14809138a1169570.js';
+const wasm = await init({ module_or_path: './meu_jogo_y2k-14809138a1169570_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
 </html>

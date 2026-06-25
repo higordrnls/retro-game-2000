@@ -1,84 +1,41 @@
 use bevy::prelude::*;
-use bevy::input::touch::TouchPhase; // Não esquece de importar isso lá em cima!
+use bevy::input::touch::TouchPhase;
+
+// 1. Defina seu Estado aqui em cima
+#[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
+enum GameState {
+    #[default]
+    Menu,
+    Playing,
+}
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .init_state::<GameState>() // Tente isso, ou .add_state se não funcionar
+        .add_systems(Update, input_handler)
+        .run();
+}
 
 fn input_handler(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-    touches: Res<Touches>, // <-- Adicione isso
+    touches: Res<Touches>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     let mut comando_de_start = false;
 
     if keyboard_input.just_pressed(KeyCode::Space) { comando_de_start = true; }
     if mouse_input.just_pressed(MouseButton::Left) { comando_de_start = true; }
-
-    // Verifica se há qualquer toque na tela
-    if touches.any_just_pressed() { // <-- Isso é o "pulo do gato"
+    
+    // Verifica toque na tela
+    if touches.any_just_pressed() {
         comando_de_start = true;
     }
 
     if comando_de_start {
         game_state.set(GameState::Playing);
     }
-}
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Rust Runner - Edição Floresta de Musgo".into(),
-                resolution: (360.0, 640.0).into(),
-                ..default()
-            }),
-            ..default()
-        }))
-        .insert_resource(ClearColor(Color::srgb(0.04, 0.06, 0.12))) // 1. Fundo azul-escuro da floresta à noite
-        .init_state::<GameState>()
-        .insert_resource(Progresso {
-            xp: 0,
-            nivel: 1,
-            pontuacao: 0,
-        })
-        .insert_resource(EstadoMundo {
-            proximo_spawn_x: 300.0,
-        })
-        .add_systems(Startup, setup_camera)
-        
-        // --- FLUXO DA TELA DE INÍCIO (MENU) ---
-        .add_systems(OnEnter(GameState::Menu), setup_menu)
-        .add_systems(Update, (atualizar_menu, piscar_texto_menu).run_if(in_state(GameState::Menu)))
-        .add_systems(OnExit(GameState::Menu), limpar_menu)
-        
-        // --- FLUXO DO JOGO ATIVO (PLAYING) ---
-        .add_systems(OnEnter(GameState::Playing), setup_jogo)
-        .add_systems(
-            Update,
-            (
-                controle_joystick,       
-                mover_jogador,           
-                aplicar_gravidade,       
-                gerenciar_morte,         
-                seguir_camera,           
-                gerar_mundo_procedural,  
-                limpar_mundo_antigo,     
-                detectar_coleta,         
-                atualizar_hud,           
-                animate_player,          
-                animar_coletaveis, // 2. Novo sistema para dar vida aos cristais
-            )
-                .chain()
-                .run_if(in_state(GameState::Playing)),
-        )
-        .run();
-}
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_state::<GameState>() 
-        // AQUI ESTÁ O SEGREDO:
-        .add_systems(Update, input_handler) 
-        .run();
 }
 
 // --- CONFIGURAÇÃO DE ESTADOS ---

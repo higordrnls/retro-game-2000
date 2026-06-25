@@ -593,12 +593,8 @@ fn detectar_coleta(
                     progresso.nivel += 1;
                     println!("🎉 LEVEL UP! Você subiu para o nível {}!", progresso.nivel);
                 }
-            }
-        }
-    }
-}
 
-// Faz os cristais rodarem continuamente, gerando um efeito estético polido
+                // Faz os cristais rodarem continuamente, gerando um efeito estético polido
 fn animar_coletaveis(time: Res<Time>, mut query: Query<&mut Transform, With<Coletavel>>) {
     for mut transform in query.iter_mut() {
         transform.rotate_z(2.0 * time.delta_seconds());

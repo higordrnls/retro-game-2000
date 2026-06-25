@@ -46,11 +46,6 @@ fn input_handler(
     }
 }
 
-// --- SUAS FUNÇÕES ORIGINAIS (MANTIDAS) ---
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
-
 // --- COMPONENTES & RECURSOS ---
 
 #[derive(Resource)]

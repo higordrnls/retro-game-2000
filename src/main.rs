@@ -190,9 +190,13 @@ fn setup_menu(mut commands: Commands) {
 fn atualizar_menu(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
+    touches: Res<Touches>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Space) || mouse_input.just_pressed(MouseButton::Left) {
+    if keyboard_input.just_pressed(KeyCode::Space)
+        || mouse_input.just_pressed(MouseButton::Left)
+        || touches.any_just_pressed()
+    {
         next_state.set(GameState::Playing);
     }
 }

@@ -14,13 +14,25 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
-        .add_systems(Startup, setup_camera) // Se você tiver uma função de setup
-        .add_systems(Update, (
-            input_handler,      // O que criamos para o touch/teclado
-            animate_player,     // <--- ADICIONE ISSO
-            atualizar_hud,      // <--- ADICIONE ISSO
-            // adicione aqui os outros sistemas que faltam (ex: controle_joystick)
+        // SISTEMAS QUE RODAM UMA VEZ SÓ (STARTUP)
+        .add_systems(Startup, (
+            setup_camera,
+            setup_menu, // <- Agora ele vai rodar!
+            setup_jogo,
         ))
+        // SISTEMAS QUE RODAM TODO FRAME (UPDATE)
+        .add_systems(Update, (
+            input_handler,
+            atualizar_menu,
+            piscar_texto_menu,
+            controle_joystick,
+            mover_jogador,
+            aplicar_gravidade,
+            seguir_camera,
+            detectar_coleta,
+            animar_coletaveis,
+            atualizar_hud,
+        ).run_if(in_state(GameState::Playing))) // Rode isso só se estiver jogando
         .run();
 }
 

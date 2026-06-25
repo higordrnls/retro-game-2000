@@ -346,6 +346,7 @@ fn setup_jogo(
 fn controle_joystick(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
+    touches: Res<Touches>,
     windows: Query<&Window>,
     mut query_jogador: Query<&mut Jogador>,
     q_base: Query<&Transform, With<BaseJoystick>>,
@@ -356,28 +357,68 @@ fn controle_joystick(
     let mut offset_manete_x = 0.0;
     let mut tentou_pular = false;
 
-    if mouse_input.pressed(MouseButton::Left) {
-        if let Some(window) = windows.iter().next() {
+    if let Some(window) = windows.iter().next() {
+        let mut pontos_ativos: Vec<Vec2> = Vec::new();
+
+        if mouse_input.pressed(MouseButton::Left) {
             if let Some(pos_cursor) = window.cursor_position() {
-                let pos_mouse_bevy = Vec2::new(
+                pontos_ativos.push(Vec2::new(
                     pos_cursor.x - window.width() / 2.0,
                     (window.height() / 2.0) - pos_cursor.y,
-                );
+                ));
+            }
+        }
 
-                if let Ok(transform_base) = q_base.get_single() {
-                    let pos_base = transform_base.translation.truncate();
-                    if pos_mouse_bevy.distance(pos_base) < 120.0 {
-                        let delta_x = pos_mouse_bevy.x - pos_base.x;
-                        if delta_x > 15.0 { direcao_x = 1.0; offset_manete_x = 25.0; } 
-                        else if delta_x < -15.0 { direcao_x = -1.0; offset_manete_x = -25.0; }
+        for touch in touches.iter() {
+            let pos = touch.position();
+            pontos_ativos.push(Vec2::new(
+                pos.x - window.width() / 2.0,
+                (window.height() / 2.0) - pos.y,
+            ));
+        }
+
+        if let Ok(transform_base) = q_base.get_single() {
+            let pos_base = transform_base.translation.truncate();
+
+            for ponto in &pontos_ativos {
+                if ponto.distance(pos_base) < 120.0 {
+                    let delta_x = ponto.x - pos_base.x;
+                    if delta_x > 15.0 {
+                        direcao_x = 1.0;
+                        offset_manete_x = 25.0;
+                    } else if delta_x < -15.0 {
+                        direcao_x = -1.0;
+                        offset_manete_x = -25.0;
                     }
                 }
+            }
+        }
 
-                if let Ok(transform_pulo) = q_pulo.get_single() {
-                    let pos_pulo = transform_pulo.translation.truncate();
-                    if pos_mouse_bevy.distance(pos_pulo) < 50.0 && mouse_input.just_pressed(MouseButton::Left) {
+        if let Ok(transform_pulo) = q_pulo.get_single() {
+            let pos_pulo = transform_pulo.translation.truncate();
+
+            if mouse_input.just_pressed(MouseButton::Left) {
+                if let Some(pos_cursor) = window.cursor_position() {
+                    let pos_mouse_bevy = Vec2::new(
+                        pos_cursor.x - window.width() / 2.0,
+                        (window.height() / 2.0) - pos_cursor.y,
+                    );
+
+                    if pos_mouse_bevy.distance(pos_pulo) < 50.0 {
                         tentou_pular = true;
                     }
+                }
+            }
+
+            for touch in touches.iter_just_pressed() {
+                let pos = touch.position();
+                let pos_touch_bevy = Vec2::new(
+                    pos.x - window.width() / 2.0,
+                    (window.height() / 2.0) - pos.y,
+                );
+
+                if pos_touch_bevy.distance(pos_pulo) < 50.0 {
+                    tentou_pular = true;
                 }
             }
         }

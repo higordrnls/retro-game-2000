@@ -29,6 +29,18 @@ fn main() {
             gerenciar_morte,
             gerar_mundo_procedural,
             limpar_mundo_antigo,
+            ElementoMenu,
+            TextoPiscante,
+            tamanho,
+            setup_menu,
+            atualizar_menu,
+            piscar_texto_menu,
+            limpar_menu,
+            setup_jogo,
+            seguir_camera,
+            aplicar_gravidade,
+            detectar_coleta,
+            animar_coletaveis,
             // ... adicione as outras que aparecem nos avisos
         ).run_if(in_state(GameState::Playing))) // Rode tudo que for de jogo só se estiver Playing
         .run();

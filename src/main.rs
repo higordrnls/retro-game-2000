@@ -4,25 +4,19 @@ use bevy::input::touch::TouchPhase; // Não esquece de importar isso lá em cima
 fn input_handler(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-    mut touch_events: EventReader<TouchInput>,
-    mut game_state: ResMut<NextState<GameState>>, 
+    touches: Res<Touches>, // <-- Adicione isso
+    mut game_state: ResMut<NextState<GameState>>,
 ) {
     let mut comando_de_start = false;
 
-    // Se apertar Espaço no teclado
     if keyboard_input.just_pressed(KeyCode::Space) { comando_de_start = true; }
-    
-    // Se clicar com o mouse
     if mouse_input.just_pressed(MouseButton::Left) { comando_de_start = true; }
 
-    // Se tocar na tela do celular
-    for event in touch_events.read() {
-        if event.phase == TouchPhase::Started {
-            comando_de_start = true;
-        }
+    // Verifica se há qualquer toque na tela
+    if touches.any_just_pressed() { // <-- Isso é o "pulo do gato"
+        comando_de_start = true;
     }
 
-    // Se qualquer coisa aconteceu, a gente manda o jogo começar!
     if comando_de_start {
         game_state.set(GameState::Playing);
     }

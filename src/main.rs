@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::input::touch::TouchPhase;
 
-// 1. Defina seu Estado aqui em cima
+// --- ESTADOS DO JOGO ---
 #[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
 enum GameState {
     #[default]
@@ -9,42 +9,46 @@ enum GameState {
     Playing,
 }
 
+// --- FUNÇÃO PRINCIPAL ---
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .init_state::<GameState>() // Tente isso, ou .add_state se não funcionar
-        .add_systems(Update, input_handler)
+        .init_state::<GameState>() // Estado inicializado corretamente
+        .add_systems(Update, input_handler.run_if(in_state(GameState::Menu))) // Input funciona apenas no Menu
+        .add_systems(Startup, setup_camera) // Adicione aqui suas funções de startup
+        // ... (coloque aqui seus outros sistemas como controle_joystick, mover_jogador, etc)
         .run();
 }
 
+// --- SISTEMA DE INPUT (TECLADO, MOUSE E TOUCH) ---
 fn input_handler(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     touches: Res<Touches>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {
-    let mut comando_de_start = false;
+    let mut iniciar = false;
 
-    if keyboard_input.just_pressed(KeyCode::Space) { comando_de_start = true; }
-    if mouse_input.just_pressed(MouseButton::Left) { comando_de_start = true; }
+    // Espaço no teclado
+    if keyboard_input.just_pressed(KeyCode::Space) { iniciar = true; }
     
-    // Verifica toque na tela
+    // Clique do mouse
+    if mouse_input.just_pressed(MouseButton::Left) { iniciar = true; }
+    
+    // Toque na tela (mobile)
     if touches.any_just_pressed() {
-        comando_de_start = true;
+        iniciar = true;
     }
 
-    if comando_de_start {
+    // Se qualquer um dos três aconteceu, muda para o jogo
+    if iniciar {
         game_state.set(GameState::Playing);
     }
 }
 
-// --- CONFIGURAÇÃO DE ESTADOS ---
-
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
-enum GameState {
-    #[default]
-    Menu,
-    Playing,
+// --- SUAS FUNÇÕES ORIGINAIS (MANTIDAS) ---
+fn setup_camera(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
 }
 
 // --- COMPONENTES & RECURSOS ---

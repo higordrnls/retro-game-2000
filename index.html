@@ -43,10 +43,66 @@
                 return;
             }
 
-            const bloquearPadrao = (evento) => evento.preventDefault();
-            canvas.addEventListener('touchstart', bloquearPadrao, { passive: false });
-            canvas.addEventListener('touchmove', bloquearPadrao, { passive: false });
-            canvas.addEventListener('touchend', bloquearPadrao, { passive: false });
+            if (canvas.dataset.touchBridgeInstalled === '1') {
+                return;
+            }
+
+            canvas.dataset.touchBridgeInstalled = '1';
+            canvas.tabIndex = 0;
+            canvas.focus({ preventScroll: true });
+
+            const dispararMouse = (tipo, touch, botoes) => {
+                canvas.dispatchEvent(new MouseEvent(tipo, {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                    button: 0,
+                    buttons: botoes,
+                }));
+            };
+
+            canvas.addEventListener('touchstart', (evento) => {
+                if (evento.cancelable) {
+                    evento.preventDefault();
+                }
+
+                for (const touch of evento.changedTouches) {
+                    dispararMouse('mousemove', touch, 1);
+                    dispararMouse('mousedown', touch, 1);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (evento) => {
+                if (evento.cancelable) {
+                    evento.preventDefault();
+                }
+
+                for (const touch of evento.changedTouches) {
+                    dispararMouse('mousemove', touch, 1);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (evento) => {
+                if (evento.cancelable) {
+                    evento.preventDefault();
+                }
+
+                for (const touch of evento.changedTouches) {
+                    dispararMouse('mouseup', touch, 0);
+                    dispararMouse('click', touch, 0);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchcancel', (evento) => {
+                if (evento.cancelable) {
+                    evento.preventDefault();
+                }
+
+                for (const touch of evento.changedTouches) {
+                    dispararMouse('mouseup', touch, 0);
+                }
+            }, { passive: false });
         }
 
         init('./meu_jogo_y2k-4285690c65216a32_bg.wasm').then(() => {

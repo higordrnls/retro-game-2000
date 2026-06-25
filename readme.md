@@ -1,46 +1,70 @@
 # 🎮 Rust Runner: O Desafio Procedural
 
-Um jogo plataforma 2D de alta performance desenvolvido inteiramente em **Rust**, utilizando o framework **Bevy Engine**. Este projeto nasceu como um estudo sobre gamificação, arquitetura ECS (Entity Component System) e geração procedural de mundos.
+Jogo de plataforma 2D feito inteiramente em **Rust** com **Bevy 0.14**. O foco do projeto é combinar geração procedural, sistema de estados, HUD, controles móveis e publicação web via **GitHub Pages**.
+
+## Visão Geral
+
+O jogo foi pensado para rodar tanto localmente quanto no navegador. A versão web usa compilação para **WASM** e foi ajustada para funcionar em desktop e também em dispositivos móveis, incluindo toque no iPhone/Safari.
+
+## Recursos
+
+- Mundo infinito com geração procedural.
+- Sistema de XP, nível e pontuação.
+- Menu inicial com transição para a gameplay.
+- Controles por teclado, mouse e toque.
+- HUD com pontuação e nível em tempo real.
+- Publicação web compatível com GitHub Pages.
+
+## Tecnologias
+
+- Rust 2021
+- Bevy 0.14
+- WebAssembly para build web
+- Trunk para empacotar e publicar a versão web
+
+## Como rodar localmente
+
+Certifique-se de ter o Rust instalado.
+
+```powershell
+cargo run --release
+```
+
+## Como gerar a versão web
+
+Instale o Trunk se ainda não tiver:
+
+```powershell
+cargo install trunk
+```
+
+Depois gere os arquivos web:
+
+```powershell
+trunk build --release --public-url ./
+```
+
+Isso gera os arquivos finais da versão web para publicação no GitHub Pages.
+
+## Como publicar no GitHub Pages
+
+1. Rode o build web com Trunk.
+2. Copie os arquivos gerados para a pasta publicada do site, se necessário.
+3. Suba o conteúdo atualizado para o repositório do GitHub Pages.
+
+Se o jogo for aberto no iPhone Safari, use uma aba privada na primeira validação para evitar cache antigo.
+
+## Controles
+
+- `A` / `D` ou setas: mover o personagem.
+- `Espaço`, `W` ou seta para cima: pular.
+- Mouse ou toque: iniciar o jogo no menu.
+- Joystick e botão na tela: controles móveis.
+
+## Observações
+
+O projeto está em Rust do começo ao fim. Os arquivos JavaScript e WASM da versão web são apenas artefatos de build, não a lógica principal do jogo.
 
 ---
 
-## 🚀 O Projeto
-O **Rust Runner** não é apenas um jogo; é uma demonstração de como manipular a renderização de elementos via código para criar uma estética imersiva (estilo floresta noturna) sem depender de assets externos pesados.
-
-### ✨ Funcionalidades Principais
-- **Mundo Infinito (Procedural):** Gerenciamento dinâmico de blocos e colisão.
-- **Sistema de Gamificação:** Lógica robusta de XP, níveis e pontuação.
-- **Arquitetura de Estados:** Transições fluidas entre Menu Principal e Gameplay.
-- **Controles Adaptáveis:** Joystick virtual e botões de ação integrados.
-- **Renderização Dinâmica:** Criação de plataformas, musgos e cristais via `SpriteBundle` e `Transform`.
-
----
-
-## 🛠 Stack Tecnológica
-- **Linguagem:** Rust (Edition 2021)
-- **Engine:** Bevy 0.14
-- **Conceitos de Engenharia:** - *ECS (Entity Component System)*
-    - *Finite State Machines*
-    - *Geração Procedural*
-
----
-
-## 📦 Como rodar localmente
-
-Certifique-se de ter o [Rust](https://www.rust-lang.org/tools/install) instalado.
-
-1. **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/higordrnls/retro-game-2000.git](https://github.com/higordrnls/retro-game-2000.git)
-   cd retro-game-2000
-   cargo run --release
-
-💼 Vamos trocar uma ideia?
-Este projeto faz parte da minha jornada de especialização em Rust para o desenvolvimento de sistemas gamificados.
-
-LinkedIn: [(https://www.linkedin.com/in/hdornelas/)]
-
-GitHub: [(https://github.com/higordrnls)]
-
-Desenvolvido com paixão em Rust.
-
+Feito com Rust e Bevy.
